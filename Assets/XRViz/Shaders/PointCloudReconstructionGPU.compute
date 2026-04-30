@@ -1,0 +1,61 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel PointCloudReconstructionGPU
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+
+// Input frames
+Texture2D<float4> inColor;
+Texture2D<float4> inDepthLower;
+Texture2D<float4> inDepthUpper;
+
+// Output frame
+RWStructuredBuffer<float4> colorOut;
+RWStructuredBuffer<float3> depthOut;
+RWStructuredBuffer<float> distanceToOrigin;
+
+// Depth Camera Intrinsics Info
+float4 camInfoDepth;
+
+int colorImageWidth;
+int colorImageHeight;
+
+float4x4 originTransform;
+
+[numthreads(8,8,1)]
+void PointCloudReconstructionGPU (uint3 id : SV_DispatchThreadID)
+{
+    uint pixelID = (id.y * colorImageWidth + id.x);
+    float depth = (float)(((inDepthLower[id.xy].g * 256.0) + (inDepthUpper[id.xy].g * 256.0 * 256.0)) * 0.001);
+
+    if(depth > 0)
+    {
+        float y = depth ; // Unity's Y is FLU's Z
+        float z = ((id.x - camInfoDepth[0]) * depth / camInfoDepth[2]); // Unity's Z is FLU's X
+        float x = ((id.y - camInfoDepth[1]) * depth / camInfoDepth[3]); // Unity's X is FLU's Y
+
+        int colColor = (int)id.x;
+        int rowColor = (int)id.y;
+
+        distanceToOrigin[pixelID] = float(y);
+
+        if(colColor >= 0 && colColor < colorImageWidth && rowColor >= 0 && rowColor < colorImageHeight)
+        {
+            colorOut[pixelID] = inColor[int2(colColor,rowColor)];
+        } 
+
+        float4x4 pointInCam = {1,0,0,x,0,1,0,y,0,0,1,z,1,1,1,1};
+        float4x4 pointInWorld = mul(originTransform,pointInCam);
+
+        x = pointInWorld[0][3];
+        y = pointInWorld[1][3];
+        z = pointInWorld[2][3];
+
+        depthOut[pixelID] = float3(x,y,z);
+    } 
+    else
+    {
+        depthOut[pixelID] = float3(0,0,0);
+        colorOut[pixelID] = float4(1,1,1,0);
+        distanceToOrigin[pixelID] = float(0);
+    }
+}

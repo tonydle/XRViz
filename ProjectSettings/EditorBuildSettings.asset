@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Start_Menu.unity
+    guid: e9c02a1e921b79e4ba7dbca7bf4cac3a
+  - enabled: 1
+    path: Assets/XRViz/Scenes/UR3e_RG2.unity
+    guid: bdd42640b1f440a46a8d12b6a5481a68
+  - enabled: 0
+    path: Assets/XRViz/Scenes/UR3e_RG2_with_RealSense.unity
+    guid: 83197dcf930e24344be15b289a5d310f
+  - enabled: 0
+    path: Assets/Scenes/VR_UR3e_RG2_Remote.unity
+    guid: 47d5d83e64d96a74d98f2095e61441fe
+  - enabled: 0
+    path: Assets/XRViz/Scenes/PR2.unity
+    guid: 43044117ff821f049aecddf7587e41b1
+  - enabled: 0
+    path: Assets/XRViz/Scenes/UR5e_RG6.unity
+    guid: cdca8a4dce8f3604facf680ae3478adb
+  - enabled: 0
+    path: Assets/XRViz/Scenes/RealSense.unity
+    guid: 3431f5f199dd9b340925dcac5d98ace9
+  - enabled: 0
+    path: Assets/Scenes/MR_UR5e_RG6_PickAndPlace.unity
+    guid: 35c60ea2797c6dd4bbc8f88ffd8d153f
+  - enabled: 1
+    path: Assets/XRViz/Scenes/RobotsGallery.unity
+    guid: 418a5a8f391d1a34daf3f951a91a0094
+  - enabled: 1
+    path: Assets/Scenes/MR_AgiBot_IK.unity
+    guid: 6d072d541a367fd46b0b1f7ebc2e0598
+  - enabled: 1
+    path: Assets/Scenes/MR_AgiBot_MoveIt.unity
+    guid: d2d3bab12e9de5f4ba0e3b8f35000f3d
+  - enabled: 1
+    path: Assets/Scenes/MR_AgiBot_MoveIt_LfD.unity
+    guid: a881b8ca7bbbf694e8d240f8fffa3905
+  - enabled: 1
+    path: Assets/Scenes/MR_VR_H1_MoveIt.unity
+    guid: a46466059f2691543bf89f0e72cf8def
+  - enabled: 1
+    path: Assets/Scenes/MR_VR_H1_IK.unity
+    guid: 382e64ee73b94d8408d4d23b44834796
+  - enabled: 1
+    path: Assets/Scenes/MR_UR10e_Robotiq_Local.unity
+    guid: 4471e83bfe602584abd4e2824d407a61
+  m_configObjects:
+    Unity.XR.Oculus.Settings: {fileID: 11400000, guid: 1b878169931b15c4fa6766028a69f3eb, type: 2}
+    com.unity.xr.arfoundation.simulation_settings: {fileID: 11400000, guid: f9332fdbd7bcdf04b82c2175acbbb54a, type: 2}
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: aa7f00b6aba500a4cb1010b3990b2243, type: 2}
+    com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 32edee0b1354c044492cce82f8563803, type: 2}
+  m_UseUCBPForAssetBundles: 0
