@@ -1,9 +1,5 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
-using UnityEngine.UI;
 
 
 namespace Unity.Robotics
@@ -11,148 +7,141 @@ namespace Unity.Robotics
     public class PointCloudRosGPU : MonoBehaviour
     {
         // To be linked in Unity Editor
-        [SerializeField] private RosSubscriberCameraInfo _camInfoColorSub;
-        [SerializeField] private RosSubscriberCameraInfo _camInfoDepthSub;
-        [SerializeField] private RosSubscriberCompressedImage _imageColorSub;
-        [SerializeField] private RosSubscriberCompressedImage _imageDepthLowerSub;
-        [SerializeField] private RosSubscriberCompressedImage _imageDepthUpperSub;
+        [SerializeField] private RosSubscriberCameraInfo m_camInfoColorSub;
+        [SerializeField] private RosSubscriberCameraInfo m_camInfoDepthSub;
+        [SerializeField] private RosSubscriberCompressedImage m_imageColorSub;
+        [SerializeField] private RosSubscriberCompressedImage m_imageDepthSub;
 
         // Render Material
-        [SerializeReference] private Material _renderMaterial;
+        [SerializeReference] private Material m_renderMaterial;
 
         // Compute Shader related - GPU
-        public ComputeShader _computeShader;
+        public ComputeShader ComputeShader;
 
         // Compute buffers
-        ComputeBuffer _depthComputeBuffer;
-        ComputeBuffer _colorComputeBuffer;
-        ComputeBuffer _distanceComputeBuffer;
-        int _totalNumVertices;
+        private ComputeBuffer m_depthComputeBuffer;
+        private ComputeBuffer m_colorComputeBuffer;
+        private ComputeBuffer m_distanceComputeBuffer;
+        private int m_totalNumVertices;
 
         // GPU Kernel ID
-        int _kernelHandleDepth = 0;
+        private int m_kernelHandleDepth = 0;
 
         // Utilities
-        bool _isInitialised = false;
+        private bool m_isInitialised = false;
 
         // To be subscribed from ROS
-        private float[] _camInfoDepth;
-        private uint _colorImageWidth, _colorImageHeight;
-        private Texture2D _colorTexture;
-        private Texture2D _depthLowerTexture;
-        private Texture2D _depthUpperTexture;
-        private Transform _pointCloudOriginTransform;
-        private Bounds _defaultBounds = new Bounds(Vector3.zero, Vector3.one*1000f);
+        private float[] m_camInfoDepth;
+        private uint m_colorImageWidth, m_colorImageHeight;
+        private Texture2D m_colorTexture;
+        private Texture2D m_depthTexture;
+        private Transform m_pointCloudOriginTransform;
+        private Bounds m_defaultBounds = new(Vector3.zero, Vector3.one * 1000f);
 
-        void Start()
+        private void Start()
         {
-            _renderMaterial = new Material(_renderMaterial);
-            _computeShader = Instantiate(_computeShader);
+            m_renderMaterial = new Material(m_renderMaterial);
+            ComputeShader = Instantiate(ComputeShader);
             StartCoroutine(WaitForSubsAndInit());
         }
 
-        IEnumerator WaitForSubsAndInit()
+        private IEnumerator WaitForSubsAndInit()
         {
             // Wait until the necessary subscribers have received at least one message
-            while (!_camInfoColorSub.isReady() || !_camInfoDepthSub.isReady())
+            while (!m_camInfoColorSub.isReady() || !m_camInfoDepthSub.isReady())
             {
                 yield return null;
             }
 
             // Now that the components are ready, perform the initialization
-            _camInfoDepth = _camInfoDepthSub.GetCameraNecessaryInfo();
-            _colorImageWidth = _camInfoColorSub.GetImageWidth();
-            _colorImageHeight = _camInfoColorSub.GetImageHeight();
-            _pointCloudOriginTransform = GameObject.Find(_camInfoDepthSub.GetFrameId()).transform;
+            m_camInfoDepth = m_camInfoDepthSub.GetCameraNecessaryInfo();
+            m_colorImageWidth = m_camInfoColorSub.GetImageWidth();
+            m_colorImageHeight = m_camInfoColorSub.GetImageHeight();
+            // m_pointCloudOriginTransform = GameObject.Find(m_camInfoDepthSub.GetFrameId()).transform;
+            m_pointCloudOriginTransform = transform;
 
             // Initialize the compute shader's static variables and buffers
-            _totalNumVertices = (int)_colorImageWidth * (int)_colorImageHeight;
+            m_totalNumVertices = (int)m_colorImageWidth * (int)m_colorImageHeight;
 
-            _depthComputeBuffer = new ComputeBuffer(_totalNumVertices, sizeof(float)*3);
-            _colorComputeBuffer = new ComputeBuffer(_totalNumVertices, sizeof(float)*4);
-            _distanceComputeBuffer = new ComputeBuffer(_totalNumVertices, sizeof(float));
+            m_depthComputeBuffer = new ComputeBuffer(m_totalNumVertices, sizeof(float) * 3);
+            m_colorComputeBuffer = new ComputeBuffer(m_totalNumVertices, sizeof(float) * 4);
+            m_distanceComputeBuffer = new ComputeBuffer(m_totalNumVertices, sizeof(float));
 
-            _computeShader.SetFloats("camInfoDepth",_camInfoDepth);
-            _computeShader.SetInt("colorImageWidth",(int)_colorImageWidth);
-            _computeShader.SetInt("colorImageHeight",(int)_colorImageHeight);
+            ComputeShader.SetFloats("camInfoDepth", m_camInfoDepth);
+            ComputeShader.SetInt("colorImageWidth", (int)m_colorImageWidth);
+            ComputeShader.SetInt("colorImageHeight", (int)m_colorImageHeight);
 
             // Set outputs for GPU kernels
-            _computeShader.SetBuffer(_kernelHandleDepth,"depthOut",_depthComputeBuffer);
-            _computeShader.SetBuffer(_kernelHandleDepth,"colorOut",_colorComputeBuffer);
-            _computeShader.SetBuffer(_kernelHandleDepth,"distanceToOrigin",_distanceComputeBuffer);
+            ComputeShader.SetBuffer(m_kernelHandleDepth, "depthOut", m_depthComputeBuffer);
+            ComputeShader.SetBuffer(m_kernelHandleDepth, "colorOut", m_colorComputeBuffer);
+            ComputeShader.SetBuffer(m_kernelHandleDepth, "distanceToOrigin", m_distanceComputeBuffer);
 
             // Set values to Material for rendering
-            _renderMaterial.SetBuffer("vertexPosition",_depthComputeBuffer);
-            _renderMaterial.SetBuffer("vertexColor",_colorComputeBuffer);
-            _renderMaterial.SetBuffer("distanceToOrigin",_distanceComputeBuffer);
+            m_renderMaterial.SetBuffer("vertexPosition", m_depthComputeBuffer);
+            m_renderMaterial.SetBuffer("vertexColor", m_colorComputeBuffer);
+            m_renderMaterial.SetBuffer("distanceToOrigin", m_distanceComputeBuffer);
 
-            _isInitialised = true;
+            m_isInitialised = true;
         }
 
         private void LateUpdate()
         {
-            if(!_isInitialised)
+            if (!m_isInitialised)
             {
                 return;
             }
 
             // make sure to have enough images before processing
             uint numImages = 0;
-            if(_imageColorSub.isReady())
+            if (m_imageColorSub.isReady())
             {
-                _colorTexture = _imageColorSub.GetLatestTexture2D();
+                m_colorTexture = m_imageColorSub.GetLatestTexture2D();
                 numImages++;
             }
-            if(_imageDepthLowerSub.isReady())
+            if (m_imageDepthSub.isReady())
             {
-                _depthLowerTexture = _imageDepthLowerSub.GetLatestTexture2D();
+                m_depthTexture = m_imageDepthSub.GetLatestTexture2D();
                 numImages++;
             }
-            if(_imageDepthUpperSub.isReady())
+            if (numImages == 2)
             {
-                _depthUpperTexture = _imageDepthUpperSub.GetLatestTexture2D();
-                numImages++;
-            }
-            if(numImages == 3)
-            {
-                GPUGeneratePointCloud();                
+                GPUGeneratePointCloud();
             }
         }
 
-        void GPUGeneratePointCloud()
+        private void GPUGeneratePointCloud()
         {
-           // Set inputs for GPU kernels
-            _computeShader.SetTexture(_kernelHandleDepth,"inColor",_colorTexture);
-            _computeShader.SetTexture(_kernelHandleDepth,"inDepthLower",_depthLowerTexture);
-            _computeShader.SetTexture(_kernelHandleDepth,"inDepthUpper",_depthUpperTexture);
+            // Set inputs for GPU kernels
+            ComputeShader.SetTexture(m_kernelHandleDepth, "inColor", m_colorTexture);
+            ComputeShader.SetTexture(m_kernelHandleDepth, "inDepth", m_depthTexture);
 
             // Set camera origin matrix
-            _computeShader.SetMatrix("originTransform",_pointCloudOriginTransform.localToWorldMatrix);
-            
-            // Dispatch to invoke GPU computing
-            _computeShader.Dispatch(_kernelHandleDepth,(int)_colorImageWidth/8,(int)_colorImageHeight/8,1);
+            ComputeShader.SetMatrix("originTransform", m_pointCloudOriginTransform.localToWorldMatrix);
 
-            Graphics.DrawProcedural(_renderMaterial, _defaultBounds, MeshTopology.Points, _totalNumVertices, 1);
+            // Dispatch to invoke GPU computing
+            ComputeShader.Dispatch(m_kernelHandleDepth, (int)m_colorImageWidth / 8, (int)m_colorImageHeight / 8, 1);
+
+            Graphics.DrawProcedural(m_renderMaterial, m_defaultBounds, MeshTopology.Points, m_totalNumVertices, 1);
         }
 
-        void OnDestroy()
+        private void OnDestroy()
         {
-            if (_depthComputeBuffer != null)
+            if (m_depthComputeBuffer != null)
             {
-                _depthComputeBuffer.Release();
-                _depthComputeBuffer = null;
+                m_depthComputeBuffer.Release();
+                m_depthComputeBuffer = null;
             }
 
-            if (_colorComputeBuffer != null)
+            if (m_colorComputeBuffer != null)
             {
-                _colorComputeBuffer.Release();
-                _colorComputeBuffer = null;
+                m_colorComputeBuffer.Release();
+                m_colorComputeBuffer = null;
             }
 
-            if (_distanceComputeBuffer != null)
+            if (m_distanceComputeBuffer != null)
             {
-                _distanceComputeBuffer.Release();
-                _distanceComputeBuffer = null;
+                m_distanceComputeBuffer.Release();
+                m_distanceComputeBuffer = null;
             }
         }
     }

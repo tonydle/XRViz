@@ -1,101 +1,97 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Unity.Robotics
 {
     public class PointCloudRosGPU_PointCloud2 : MonoBehaviour
     {
         // Point cloud subscriber
-        [SerializeField] private RosSubscriberPointCloud2 _pointCloudSub;
+        [SerializeField] private RosSubscriberPointCloud2 m_pointCloudSub;
 
         // Render material
-        [SerializeReference] private Material _renderMaterial;
+        [SerializeReference] private Material m_renderMaterial;
 
         // Compute buffer
-        ComputeBuffer _pointPositionBuffer;
-        ComputeBuffer _pointColorBuffer;
-        int _totalNumPoints;
+        private ComputeBuffer m_pointPositionBuffer;
+        private ComputeBuffer m_pointColorBuffer;
+        private int m_totalNumPoints;
 
         // Utilities
-        bool _isInitialised = false;
-        private Bounds _defaultBounds = new Bounds(Vector3.zero, Vector3.one * 1000f);
+        private bool m_isInitialised = false;
+        private Bounds m_defaultBounds = new(Vector3.zero, Vector3.one * 1000f);
 
-        void Start()
+        private void Start()
         {
             // Clone the material to avoid changing the original
-            _renderMaterial = new Material(_renderMaterial);
-            StartCoroutine(WaitForSubAndInit());
+            m_renderMaterial = new Material(m_renderMaterial);
+            _ = StartCoroutine(WaitForSubAndInit());
         }
 
-        IEnumerator WaitForSubAndInit()
+        private IEnumerator WaitForSubAndInit()
         {
             // Wait until the point cloud subscriber has received at least one message
-            while (!_pointCloudSub.isReady())
+            while (!m_pointCloudSub.isReady())
             {
                 yield return null;
             }
 
             // Initialize once the point cloud data is ready
-            Vector3[] pointPositions = _pointCloudSub.GetLatestPoints();
-            Color[] pointColors = _pointCloudSub.GetLatestColors();
-            _totalNumPoints = pointPositions.Length;
+            var pointPositions = m_pointCloudSub.GetLatestPoints();
+            m_totalNumPoints = pointPositions.Length;
 
-            _pointPositionBuffer = new ComputeBuffer(_totalNumPoints, sizeof(float) * 3);
-            _pointColorBuffer = new ComputeBuffer(_totalNumPoints, sizeof(float) * 4);
+            m_pointPositionBuffer = new ComputeBuffer(m_totalNumPoints, sizeof(float) * 3);
+            m_pointColorBuffer = new ComputeBuffer(m_totalNumPoints, sizeof(float) * 4);
 
             // Set the buffers in the material for rendering
-            _renderMaterial.SetBuffer("vertexPosition", _pointPositionBuffer);
-            _renderMaterial.SetBuffer("vertexColor", _pointColorBuffer);
+            m_renderMaterial.SetBuffer("vertexPosition", m_pointPositionBuffer);
+            m_renderMaterial.SetBuffer("vertexColor", m_pointColorBuffer);
 
-            _isInitialised = true;
+            m_isInitialised = true;
         }
 
-        void LateUpdate()
+        private void LateUpdate()
         {
-            if (!_isInitialised || !_pointCloudSub.isReady())
+            if (!m_isInitialised || !m_pointCloudSub.isReady())
             {
                 return;
             }
 
             // Get the latest point cloud data
-            Vector3[] pointPositions = _pointCloudSub.GetLatestPoints();
-            Color[] pointColors = _pointCloudSub.GetLatestColors();
-            if (pointPositions.Length != _totalNumPoints || pointColors.Length != _totalNumPoints)
+            var pointPositions = m_pointCloudSub.GetLatestPoints();
+            var pointColors = m_pointCloudSub.GetLatestColors();
+            if (pointPositions.Length != m_totalNumPoints || pointColors.Length != m_totalNumPoints)
             {
                 // Update buffer size if point count changes
-                _totalNumPoints = pointPositions.Length;
-                _pointPositionBuffer.Release();
-                _pointColorBuffer.Release();
+                m_totalNumPoints = pointPositions.Length;
+                m_pointPositionBuffer.Release();
+                m_pointColorBuffer.Release();
 
-                _pointPositionBuffer = new ComputeBuffer(_totalNumPoints, sizeof(float) * 3);
-                _pointColorBuffer = new ComputeBuffer(_totalNumPoints, sizeof(float) * 4);
-                _renderMaterial.SetBuffer("vertexPosition", _pointPositionBuffer);
-                _renderMaterial.SetBuffer("vertexColor", _pointColorBuffer);
+                m_pointPositionBuffer = new ComputeBuffer(m_totalNumPoints, sizeof(float) * 3);
+                m_pointColorBuffer = new ComputeBuffer(m_totalNumPoints, sizeof(float) * 4);
+                m_renderMaterial.SetBuffer("vertexPosition", m_pointPositionBuffer);
+                m_renderMaterial.SetBuffer("vertexColor", m_pointColorBuffer);
             }
 
             // Update buffer data
-            _pointPositionBuffer.SetData(pointPositions);
-            _pointColorBuffer.SetData(pointColors);
+            m_pointPositionBuffer.SetData(pointPositions);
+            m_pointColorBuffer.SetData(pointColors);
 
             // Draw the point cloud
-            Graphics.DrawProcedural(_renderMaterial, _defaultBounds, MeshTopology.Points, _totalNumPoints, 1);
+            Graphics.DrawProcedural(m_renderMaterial, m_defaultBounds, MeshTopology.Points, m_totalNumPoints, 1);
         }
 
-        void OnDestroy()
+        private void OnDestroy()
         {
-            if (_pointPositionBuffer != null)
+            if (m_pointPositionBuffer != null)
             {
-                _pointPositionBuffer.Release();
-                _pointPositionBuffer = null;
+                m_pointPositionBuffer.Release();
+                m_pointPositionBuffer = null;
             }
 
-            if (_pointColorBuffer != null)
+            if (m_pointColorBuffer != null)
             {
-                _pointColorBuffer.Release();
-                _pointColorBuffer = null;
+                m_pointColorBuffer.Release();
+                m_pointColorBuffer = null;
             }
         }
     }

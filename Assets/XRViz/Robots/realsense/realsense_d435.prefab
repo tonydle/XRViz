@@ -199,68 +199,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46398bc5d6905ad429a6d2d973afe002, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!1 &1344314595462926619
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6532211109114964074}
-  - component: {fileID: 2997849274486420521}
-  - component: {fileID: 5022348706584603758}
-  m_Layer: 0
-  m_Name: Color Image
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6532211109114964074
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1344314595462926619}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7747284969538152348}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2997849274486420521
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1344314595462926619}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d4b007147803934e8f6ae38345b63fe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _topic: /camera/color/image_raw/compressed
-  _queueSize: 1
---- !u!114 &5022348706584603758
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1344314595462926619}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4af57b8d7587dc14faf484f1f95bf20e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  renderTexture: {fileID: 8400000, guid: b484442f172d39f4393331c3a0e9981e, type: 2}
-  imageSub: {fileID: 2997849274486420521}
-  displayFrameRate: 30
 --- !u!1 &2069306093567908942
 GameObject:
   m_ObjectHideFlags: 0
@@ -305,98 +243,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46398bc5d6905ad429a6d2d973afe002, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!1 &2368681352125373552
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 7735856610515243615}
-  - component: {fileID: 1072219244930134472}
-  m_Layer: 0
-  m_Name: Depth Image Upper
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &7735856610515243615
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2368681352125373552}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7901607725453675227}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1072219244930134472
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2368681352125373552}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d4b007147803934e8f6ae38345b63fe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _topic: /camera/depth/image_upper/compressed
-  _queueSize: 1
---- !u!1 &3088494784914344960
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2144002268626663173}
-  - component: {fileID: 9061393544918130079}
-  m_Layer: 0
-  m_Name: Depth Cam Info
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2144002268626663173
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3088494784914344960}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7901607725453675227}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &9061393544918130079
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3088494784914344960}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5307bac67f7a185499b2c34fb964092a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _topic: /camera/aligned_depth_to_color/camera_info
-  _queueSize: 1
 --- !u!1 &3552434614594213165
 GameObject:
   m_ObjectHideFlags: 0
@@ -453,7 +299,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3648317686825712674}
   m_Layer: 0
-  m_Name: ROS and Point Cloud
+  m_Name: ROS Subscribers
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -631,6 +477,7 @@ Transform:
   m_Children:
   - {fileID: 3544151695084187697}
   - {fileID: 4192401192096250428}
+  - {fileID: 9172271461923107292}
   m_Father: {fileID: 7891266113004361148}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5181297599748960925
@@ -710,52 +557,6 @@ Transform:
   - {fileID: 6164866662238556908}
   m_Father: {fileID: 7654210775175937080}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &6527538170467779441
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 4641928844280912294}
-  - component: {fileID: 8481657120160936314}
-  m_Layer: 0
-  m_Name: Color Cam Info
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &4641928844280912294
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6527538170467779441}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7747284969538152348}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8481657120160936314
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6527538170467779441}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5307bac67f7a185499b2c34fb964092a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _topic: /camera/color/camera_info
-  _queueSize: 1
 --- !u!1 &6588727554463421118
 GameObject:
   m_ObjectHideFlags: 0
@@ -815,12 +616,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6794651172874636801}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 7901607725453675227}
+  m_Father: {fileID: 7685663830479475535}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &4194680386561621143
 MonoBehaviour:
@@ -834,13 +635,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a27b662734e427e4fbe84116a5d0439a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _camInfoColorSub: {fileID: 8481657120160936314}
-  _camInfoDepthSub: {fileID: 9061393544918130079}
-  _imageColorSub: {fileID: 2997849274486420521}
-  _imageDepthLowerSub: {fileID: 5421906732086453971}
-  _imageDepthUpperSub: {fileID: 1072219244930134472}
-  _renderMaterial: {fileID: 2100000, guid: be1d62ffdaa6abe4da5c6b0fc73cc9be, type: 2}
-  _computeShader: {fileID: 7200000, guid: 019a9b3e7affde94e80986072afc62ae, type: 3}
+  m_camInfoColorSub: {fileID: 3856383370345991672}
+  m_camInfoDepthSub: {fileID: 2382648415140516355}
+  m_imageColorSub: {fileID: 7967366812412440313}
+  m_imageDepthSub: {fileID: 5783137310747646891}
+  m_renderMaterial: {fileID: 2100000, guid: be1d62ffdaa6abe4da5c6b0fc73cc9be, type: 2}
+  ComputeShader: {fileID: 7200000, guid: 019a9b3e7affde94e80986072afc62ae, type: 3}
 --- !u!1 &6807978953968466333
 GameObject:
   m_ObjectHideFlags: 0
@@ -940,52 +740,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   geometryType: 3
---- !u!1 &7187042787489260987
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6063809632663954821}
-  - component: {fileID: 5421906732086453971}
-  m_Layer: 0
-  m_Name: Depth Image Lower
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &6063809632663954821
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7187042787489260987}
-  serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7901607725453675227}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &5421906732086453971
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7187042787489260987}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d4b007147803934e8f6ae38345b63fe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _topic: /camera/depth/image_lower/compressed
-  _queueSize: 1
 --- !u!1 &7476567267193831451
 GameObject:
   m_ObjectHideFlags: 0
@@ -1086,6 +840,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7747284969538152348}
+  - component: {fileID: 3856383370345991672}
+  - component: {fileID: 7967366812412440313}
   m_Layer: 0
   m_Name: Color
   m_TagString: Untagged
@@ -1105,11 +861,37 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 4641928844280912294}
-  - {fileID: 6532211109114964074}
+  m_Children: []
   m_Father: {fileID: 3648317686825712674}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3856383370345991672
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7761618341822173378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5307bac67f7a185499b2c34fb964092a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _topic: /camera/camera/color/camera_info
+  _queueSize: 1
+--- !u!114 &7967366812412440313
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7761618341822173378}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d4b007147803934e8f6ae38345b63fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _topic: /camera/camera/color/image_raw/compressed
+  _queueSize: 1
 --- !u!1 &7771758063696500513
 GameObject:
   m_ObjectHideFlags: 0
@@ -1377,8 +1159,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7901607725453675227}
+  - component: {fileID: 2382648415140516355}
+  - component: {fileID: 5783137310747646891}
   m_Layer: 0
-  m_Name: Depth and Points
+  m_Name: Depth
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1396,13 +1180,37 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 2144002268626663173}
-  - {fileID: 6063809632663954821}
-  - {fileID: 7735856610515243615}
-  - {fileID: 9172271461923107292}
+  m_Children: []
   m_Father: {fileID: 3648317686825712674}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2382648415140516355
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9185503644130515103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5307bac67f7a185499b2c34fb964092a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _topic: /camera/camera/aligned_depth_to_color/camera_info
+  _queueSize: 1
+--- !u!114 &5783137310747646891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9185503644130515103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d4b007147803934e8f6ae38345b63fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _topic: /camera/camera/aligned_depth_to_color/image_raw/compressedDepth
+  _queueSize: 1
 --- !u!1001 &4617165065232368312
 PrefabInstance:
   m_ObjectHideFlags: 0

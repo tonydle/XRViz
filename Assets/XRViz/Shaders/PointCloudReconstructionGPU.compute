@@ -1,12 +1,8 @@
-// Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel PointCloudReconstructionGPU
-// Create a RenderTexture with enableRandomWrite flag and set it
-// with cs.SetTexture
 
 // Input frames
 Texture2D<float4> inColor;
-Texture2D<float4> inDepthLower;
-Texture2D<float4> inDepthUpper;
+Texture2D<float4> inDepth;
 
 // Output frame
 RWStructuredBuffer<float4> colorOut;
@@ -25,13 +21,16 @@ float4x4 originTransform;
 void PointCloudReconstructionGPU (uint3 id : SV_DispatchThreadID)
 {
     uint pixelID = (id.y * colorImageWidth + id.x);
-    float depth = (float)(((inDepthLower[id.xy].g * 256.0) + (inDepthUpper[id.xy].g * 256.0 * 256.0)) * 0.001);
-
+    
+    // Convert normalized depth back to actual depth in meters (assuming depth is in millimeters and normalized to [0,1])
+    float depthNorm = inDepth.Load(int3(id.x, id.y, 0));
+    float depth = depthNorm * 65535.0 * 0.001; 
+    
     if(depth > 0)
     {
         float y = depth ; // Unity's Y is FLU's Z
         float z = ((id.x - camInfoDepth[0]) * depth / camInfoDepth[2]); // Unity's Z is FLU's X
-        float x = ((id.y - camInfoDepth[1]) * depth / camInfoDepth[3]); // Unity's X is FLU's Y
+        float x = (-(id.y - camInfoDepth[1]) * depth / camInfoDepth[3]); // Unity's X is FLU's -Y
 
         int colColor = (int)id.x;
         int rowColor = (int)id.y;
