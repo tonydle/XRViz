@@ -1,19 +1,19 @@
 # XRViz MR MVP — UR3e on Quest 3
 
 Goal: put on a Quest 3, see your room in passthrough with a virtual UR3e that mirrors
-`/joint_states` from ROS 2 live, plus a floating ROS connection status panel. The robot
-can be repositioned by grabbing a handle under its base.
+`/joint_states` from ROS 2 live, plus a floating ROS connection status panel with
+Connect/Disconnect buttons. Both the robot and the panel can be repositioned by
+grabbing their own handles.
 
-The stack is built on **Meta XR SDK Building Blocks** (Camera Rig, Passthrough, hand
-tracking, grab interactions) on the OpenXR loader — the XRViz layer only adds the ROS
-side.
+The stack is built on **Meta XR SDK Building Blocks** (Camera Rig, Passthrough, Grab
+Interaction, Ray Interaction, optionally Hand Tracking) on the OpenXR loader — the
+XRViz layer only adds the ROS side.
 
 ## 1. Unity setup (one-time)
 
 1. Open the project in Unity **6000.3.11f1**. The manifest now pulls in:
    - `com.meta.xr.sdk.core` 203.0.0 (Building Blocks, OVRCameraRig, Passthrough)
-   - `com.meta.xr.sdk.interaction.ovr` 203.0.0 (Interaction SDK — grab interactions)
-   - `com.meta.xr.simulator` 81.0.1 (optional desktop testing)
+   - `com.meta.xr.sdk.interaction.ovr` 203.0.0 (Interaction SDK — grab/ray interactions)
 2. Switch platform to **Android** (File > Build Profiles) if not already.
 3. Run **Meta > Tools > Project Setup Tool** and click **Fix All** (and Apply All
    recommendations) for the Android target. This configures the OpenXR loader features,
@@ -30,21 +30,31 @@ side.
    - the `ur3e_rg2` prefab — already wired: `RosSubscriberJointState` on
      `/joint_states` → `RobotStateWriterController` (with RG2 gripper mimic joints) →
      ArticulationBody joints
-   - a **Robot Placement Handle** cube (with `RobotPlacementFollower`) under the robot base
+   - a **Robot Placement Handle** cube (with `RobotPlacementFollower`), positioned at the
+     trolley's top-front-left corner, already grab-enabled
    - a world-space **ROS Status Panel** (`RosConnectionStatusUI`) showing IP, connection
-     state, and message freshness
+     state, and message freshness, with **Connect**/**Disconnect** buttons (ray-enabled)
+     and its own **Panel Placement Handle** (with `PanelPlacementFollower`), also
+     already grab-enabled
    - a directional light
-2. Open **Meta > Tools > Building Blocks** and drag into the scene:
-   - **[Camera Rig]** (required)
-   - **[Passthrough]** (required — this is what makes it mixed reality)
-   - **[Hand Tracking]** (optional)
-3. Make the handle grabbable with the Interaction SDK: select **Robot Placement
-   Handle** and use the Interaction SDK quick action (right-click >
-   Interaction SDK > Add Grab Interaction), or drag in the **[Grab Interaction]**
-   building block and copy its `Grabbable` setup onto the handle. The
-   `RobotPlacementFollower` script teleports the robot to follow the handle
-   (yaw-only, so the robot stays upright).
-4. Save the scene.
+
+   Re-running this menu item regenerates the scene from scratch and overwrites the
+   file — it does **not** preserve Building Blocks or any other manual scene edits, so
+   step 2 below has to be redone every time you regenerate.
+
+2. Open **Meta > Tools > Building Blocks** and add every block below to the scene.
+   These are project-level (add once per scene, not per object) — the handles and
+   panel buttons the generator creates are already wired to use whatever interactors
+   these blocks add, they just don't work until the blocks exist:
+   - **[Camera Rig]** — required, root of everything else below
+   - **[Passthrough]** — required, this is what makes it mixed reality
+   - **[Grab Interaction]** — required, drives both Robot Placement Handle and Panel
+     Placement Handle
+   - **[Ray Interaction]** — required, drives the ROS Status Panel's Connect/Disconnect
+     buttons (point + pull the trigger, like a normal menu — not poke/touch)
+   - **[Hand Tracking]** — optional, lets the above work with bare hands instead of
+     controllers
+3. Save the scene.
 
 ## 3. Point Unity at your ROS machine
 
@@ -107,9 +117,6 @@ tethered over Link — no APK, instant iteration.
 5. With Quest Link active, just press **Play** in the Editor — or build a Windows
    player (File > Build Profiles > Windows) and run the .exe.
 
-Note: the Meta XR Simulator hijacks the OpenXR runtime when activated — make sure it's
-**deactivated** (Meta > Meta XR Simulator) when testing over Link.
-
 ### Option B — standalone APK on the headset
 
 File > Build Profiles > Android > **Build And Run** with the Quest 3 on USB
@@ -130,7 +137,5 @@ table height in front of you, and the status panel to the right.
 
 ## Notes
 
-- The Meta XR Simulator (Meta > Meta XR Simulator > Activate) lets you smoke-test the
-  scene in Play Mode without a headset, minus real passthrough imagery.
 - Other robots: the same recipe works for any prefab under `Assets/XRViz/Robots/` —
   wire one with **XRViz > Add Joint State Components** if it isn't already.

@@ -66,6 +66,9 @@ sysinfo.txt
 # Mono auto generated files
 mono_crash.*
 
+# Unity Editor crash-recovery scene snapshots
+/[Aa]ssets/_Recovery/
+
 # Builds
 *.apk
 *.aab
@@ -100,4 +103,3 @@ InitTestScene*.unity*
 
 .vsconfig
 .vscode/
-Assets/LightBuzz_Jpeg*

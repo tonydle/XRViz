@@ -21,6 +21,16 @@ namespace Unity.Robotics
             _ros = ROSConnection.GetOrCreateInstance();
         }
 
+        public void Connect()
+        {
+            _ros?.Connect();
+        }
+
+        public void Disconnect()
+        {
+            _ros?.Disconnect();
+        }
+
         private void Update()
         {
             TrackJointStateArrival();

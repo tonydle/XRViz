@@ -24,10 +24,14 @@ Full walkthrough with troubleshooting: [Docs/MVP_QUEST3_SETUP.md](Docs/MVP_QUEST
 2. Run **Meta > Tools > Project Setup Tool → Fix All** for your target
    (Windows and/or Android).
 3. Run **XRViz > Create MR MVP Scene (UR3e)** — generates
-   `Assets/XRViz/Scenes/MVP_UR3e_MR.unity`, already added to Build Settings.
-4. From **Meta > Tools > Building Blocks**, drag **[Camera Rig]** and
-   **[Passthrough]** into the scene (optional: [Hand Tracking]); give
-   *Robot Placement Handle* a grab interaction (Interaction SDK).
+   `Assets/XRViz/Scenes/MVP_UR3e_MR.unity`, already added to Build Settings. This
+   regenerates the scene from scratch each time it's run, so Building Blocks (step 4)
+   need to be re-added after every regeneration.
+4. From **Meta > Tools > Building Blocks**, add to the scene:
+   **[Camera Rig]**, **[Passthrough]**, **[Grab Interaction]** (drives the robot's
+   and panel's placement handles), **[Ray Interaction]** (drives the panel's
+   Connect/Disconnect buttons — point + trigger, not poke), and optionally
+   **[Hand Tracking]**.
 5. Set **ROS IP Address** on `Assets/Resources/ROSConnectionPrefab` to your ROS
    machine (port 10000).
 
