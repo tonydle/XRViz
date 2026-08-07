@@ -32,9 +32,23 @@ ROS integration is built on Unity's ROS-TCP-Connector package (`ROSConnection.Ge
    - `Sensor/`: camera images to textures/meshes, IMU, and the GPU point cloud (below).
    - `Control/`: publishing twist/joint commands from XR interactions (e.g. grabbable end effector).
    - `User/`: publishes XR headset/controller tracking to ROS.
-   - `Visualizations/`: marker rendering (cubes, line strips).
+   - `Visualizations/`: marker rendering (cubes, line strips) and `LaserScanVisualizer`.
+
+   Two rules for anything new in here:
+   - **Convert coordinates with `FLU.ConvertToRUF`** from `Unity.Robotics.ROSTCPConnector.ROSGeometry` — ROS is right-handed Z-up, Unity left-handed Y-up. Don't hand-roll it. (`RosSubscriberPointCloud2` predates this rule and does no conversion — its clouds land rotated and mirrored.)
+   - **Draw into a Mesh under a MeshFilter, not `Graphics.DrawProcedural`.** DrawProcedural renders in world space and ignores the GameObject's Transform, so a `PlacementHandle` can't move it. This is why `PointCloudRosGPU_PointCloud2` isn't handle-movable.
+
+   Visualisations need an unlit, vertex-colour-capable, stereo-aware shader: `Shaders/VertexColorUnlit.shader`. Built-in `Unlit/Color` ignores vertex colours; lit shaders render near-black under passthrough; and without the `UNITY_VERTEX_OUTPUT_STEREO` macros a mesh draws to one eye only on Quest. `Shaders/HandleUnlit.shader` is the solid-colour counterpart for meshes with no vertex colour channel (the handle spheres) — same stereo macros, plus a baked shape ramp so a sphere doesn't read as a flat disc.
 
 3. **`Utils/`** — e.g. `CompressedDepthPNGDecoder` for ROS `compressedDepth` (16-bit PNG) payloads.
+
+4. **`Interaction/`** — `PlacementHandle`, the one generic grab handle: a grabbable sphere that repositions whatever it points at (`_target` for a Transform, `_targetArticulationBody` for a robot root, which must be moved with `TeleportRoot`). It captures its start pose at `Awake` and `ResetToDefault()` returns to it. Handles are colour-coded; the colours are defined once in `k_HandleStyles` (`XRVizCreateMVPScene.cs`) and drive both the generated materials in `Assets/XRViz/Materials/` and the panel's key — add a handle there, not ad hoc, or the key goes stale.
+
+5. **`UI/`** — the world-space ROS control panel. `TopicBrowserUI` lists what the endpoint advertises (`ROSConnection.GetTopicAndTypeList`) and rebinds a subscriber live via `IRosTopicBinding`, which `RosSubscriber<T>` implements — `SetTopic` is plain configuration before `Start` and an unsubscribe/resubscribe afterwards. `ControlPanelActions` holds the buttons that act on the rest of the scene (clear the laser scan, reset the anchors); it locates targets with `FindObjectsByType` at press time rather than a serialized list, so hand-added objects are picked up.
+
+   Panels are styled by `StylePanel` in the scene generator: a near-opaque dark background plus a header bar. The background is functional, not decoration — a translucent canvas over passthrough video of a light wall is unreadable. Anything new floating in world space needs the same treatment.
+
+   A visualiser that draws into a mesh keeps drawing after its topic goes quiet, and a frozen frame looks like a live one. Give it an arrival-time staleness timeout (`Time.realtimeSinceStartup` at receipt, *not* the message header stamp) and a `Clear()` that also clears the subscriber's parsed state — clearing only the mesh lets the next frame rebuild it from the cached message. `LaserScanVisualizer` is the reference.
 
 ### GPU point cloud pipeline
 
