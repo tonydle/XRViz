@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/XRViz/Scenes/RobotsGallery.unity
     guid: 418a5a8f391d1a34daf3f951a91a0094
   - enabled: 1

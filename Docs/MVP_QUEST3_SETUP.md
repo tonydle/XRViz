@@ -38,14 +38,13 @@ XRViz layer only adds the ROS side.
      already grab-enabled
    - a directional light
 
-   Re-running this menu item regenerates the scene from scratch and overwrites the
-   file — it does **not** preserve Building Blocks or any other manual scene edits, so
-   step 2 below has to be redone every time you regenerate.
+   Re-running this menu item updates the scene in place — it only replaces the objects
+   listed above, so Building Blocks and any other manual scene edits are left alone.
+   Step 2 below is a one-time setup, not something you redo after every regeneration.
 
-2. Open **Meta > Tools > Building Blocks** and add every block below to the scene.
-   These are project-level (add once per scene, not per object) — the handles and
-   panel buttons the generator creates are already wired to use whatever interactors
-   these blocks add, they just don't work until the blocks exist:
+2. Open **Meta > Tools > Building Blocks** and add every block below to the scene, once.
+   The handles and panel buttons the generator creates are already wired to use whatever
+   interactors these blocks add, they just don't work until the blocks exist:
    - **[Camera Rig]** — required, root of everything else below
    - **[Passthrough]** — required, this is what makes it mixed reality
    - **[Grab Interaction]** — required, drives both Robot Placement Handle and Panel

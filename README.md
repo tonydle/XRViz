@@ -24,9 +24,9 @@ Full walkthrough with troubleshooting: [Docs/MVP_QUEST3_SETUP.md](Docs/MVP_QUEST
 2. Run **Meta > Tools > Project Setup Tool → Fix All** for your target
    (Windows and/or Android).
 3. Run **XRViz > Create MR MVP Scene (UR3e)** — generates
-   `Assets/XRViz/Scenes/MVP_UR3e_MR.unity`, already added to Build Settings. This
-   regenerates the scene from scratch each time it's run, so Building Blocks (step 4)
-   need to be re-added after every regeneration.
+   `Assets/XRViz/Scenes/MVP_UR3e_MR.unity`, already added to Build Settings. Re-running
+   this later only updates the objects it generates and leaves Building Blocks (step 4)
+   alone, so step 4 is a one-time setup.
 4. From **Meta > Tools > Building Blocks**, add to the scene:
    **[Camera Rig]**, **[Passthrough]**, **[Grab Interaction]** (drives the robot's
    and panel's placement handles), **[Ray Interaction]** (drives the panel's

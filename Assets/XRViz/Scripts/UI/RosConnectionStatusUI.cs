@@ -31,6 +31,14 @@ namespace Unity.Robotics
             _ros?.Disconnect();
         }
 
+        public void SetIpAddress(string ip)
+        {
+            if (_ros == null)
+                return;
+            _ros.Disconnect();
+            _ros.RosIPAddress = ip;
+        }
+
         private void Update()
         {
             TrackJointStateArrival();
