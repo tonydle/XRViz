@@ -28,6 +28,7 @@ ROS integration is built on Unity's ROS-TCP-Connector package (`ROSConnection.Ge
 
 2. **`ROS/MessageHandling/`** — MonoBehaviours that wire subscribers/publishers to scene behavior, grouped by role:
    - `Robot/`: drives URDF-imported robots kinematically. `JointStateWriter` (one per `ArticulationBody` joint) sets joint positions directly; `RobotStateWriterController` maps joint names → writers and handles URDF mimic joints; `RobotStateWriterControllerRos` feeds it from a `RosSubscriberJointState`.
+     - **Runtime scripts must not reference `UrdfImporter` types.** The URDF Importer's runtime assembly is desktop-only (`includePlatforms: Editor/Win64/Linux64/macOS` — it ships native AssimpNet + VHACD with no Android binary), so any such reference breaks the Quest APK build with `CS0246` while compiling fine in the Editor. Joint names come from the baked `UrdfJointName` component (**XRViz → Bake URDF Joint Names**) and collision meshes from the child named `Collisions`. See `Docs/MVP_QUEST3_SETUP.md`.
    - `Sensor/`: camera images to textures/meshes, IMU, and the GPU point cloud (below).
    - `Control/`: publishing twist/joint commands from XR interactions (e.g. grabbable end effector).
    - `User/`: publishes XR headset/controller tracking to ROS.

@@ -24,6 +24,12 @@ namespace Unity.Robotics
         [SerializeField]
         private List<MimicJoint> mimicJoints = new List<MimicJoint>();
 
+        // The URDF Importer always parents a link's collision meshes under a child named exactly
+        // this (UrdfCollisionsExtensions.Create / UrdfRobotExtensions.collisionObjectName). Found
+        // by name rather than by its UrdfCollisions component because Unity.Robotics.UrdfImporter
+        // is a desktop-only assembly and isn't in an Android build - see UrdfJointName.
+        const string k_CollisionsObjectName = "Collisions";
+
         void Start()
         {
             _jointPositions = new List<float>();
@@ -32,9 +38,9 @@ namespace Unity.Robotics
             foreach (ArticulationBody joint in _articulationChain)
             {
                 joint.useGravity = false;
-                UrdfImporter.UrdfCollisions urdfCollision = joint.gameObject.GetComponentInChildren<UrdfImporter.UrdfCollisions>();
-                if(urdfCollision != null) 
-                    urdfCollision.gameObject.SetActive(false);
+                Transform collisions = joint.transform.Find(k_CollisionsObjectName);
+                if(collisions != null)
+                    collisions.gameObject.SetActive(false);
                 if(joint.jointType != ArticulationJointType.FixedJoint)
                 {
                     joint.gameObject.AddComponent<JointStateWriter>();

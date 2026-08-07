@@ -2,21 +2,36 @@ using UnityEngine;
 
 namespace Unity.Robotics
 {
-    [RequireComponent(typeof(Canvas))]
+    // Lives on the ROS control panel group root - which stays active so Update keeps polling -
+    // and shows/hides the panel's Canvases below it. Toggles Canvas.enabled rather than the
+    // GameObjects so the keypad's own shown/hidden state (IpKeypadUI drives that with
+    // SetActive) stays independent of whether the panel as a whole is visible.
     public class ControlPanelMenuToggle : MonoBehaviour
     {
-        private Canvas _canvas;
+        private Canvas[] _canvases;
+        private bool _visible;
 
         private void Start()
         {
-            _canvas = GetComponent<Canvas>();
-            _canvas.enabled = false;
+            // Include inactive: the keypad Canvas starts hidden and must still be picked up
+            _canvases = GetComponentsInChildren<Canvas>(true);
+            SetVisible(false);
         }
 
         private void Update()
         {
             if (OVRInput.GetDown(OVRInput.Button.Start, OVRInput.Controller.LTouch))
-                _canvas.enabled = !_canvas.enabled;
+                SetVisible(!_visible);
+        }
+
+        private void SetVisible(bool visible)
+        {
+            _visible = visible;
+            foreach (var canvas in _canvases)
+            {
+                if (canvas != null)
+                    canvas.enabled = visible;
+            }
         }
     }
 }
