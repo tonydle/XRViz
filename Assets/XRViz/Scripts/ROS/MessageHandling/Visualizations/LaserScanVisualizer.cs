@@ -14,7 +14,7 @@ namespace Unity.Robotics
     // VR: MeshTopology.Points draws single pixels, and flat quads in the scan plane vanish when
     // viewed edge-on, which is exactly where your head usually is relative to a floor-level lidar.
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-    public class LaserScanVisualizer : MonoBehaviour
+    public class LaserScanVisualizer : MonoBehaviour, IClearableVisualization
     {
         [SerializeField] private RosSubscriberLaserScan _scanSub;
         [SerializeField] private float _pointSize = 0.02f;

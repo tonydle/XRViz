@@ -147,9 +147,6 @@ PlayerSettings:
   bundleVersion: 0.1
   preloadedAssets:
   - {fileID: 11400000, guid: 53fae27a67eca644a890ef67074d784f, type: 2}
-  - {fileID: 11400000, guid: f9332fdbd7bcdf04b82c2175acbbb54a, type: 2}
-  - {fileID: 5119929165718521979, guid: 32edee0b1354c044492cce82f8563803, type: 2}
-  - {fileID: -2421550745590250268, guid: aa7f00b6aba500a4cb1010b3990b2243, type: 2}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   m_HolographicPauseOnTrackingLoss: 1
@@ -180,8 +177,8 @@ PlayerSettings:
     tvOS: 0
   overrideDefaultApplicationIdentifier: 0
   AndroidBundleVersionCode: 1
-  AndroidMinSdkVersion: 29
-  AndroidTargetSdkVersion: 0
+  AndroidMinSdkVersion: 32
+  AndroidTargetSdkVersion: 34
   AndroidPreferredInstallLocation: 0
   AndroidPreferredDataLocation: 1
   aotOptions: 
@@ -442,7 +439,7 @@ PlayerSettings:
   - m_BuildTarget: LuminSupport
     m_GraphicsJobs: 0
   - m_BuildTarget: AndroidPlayer
-    m_GraphicsJobs: 0
+    m_GraphicsJobs: 1
   - m_BuildTarget: WebGLSupport
     m_GraphicsJobs: 0
   m_BuildTargetGraphicsJobMode:
@@ -450,6 +447,8 @@ PlayerSettings:
     m_GraphicsJobMode: 0
   - m_BuildTarget: XboxOnePlayer
     m_GraphicsJobMode: 0
+  - m_BuildTarget: AndroidPlayer
+    m_GraphicsJobMode: 1
   m_BuildTargetGraphicsAPIs:
   - m_BuildTarget: AndroidPlayer
     m_APIs: 15000000

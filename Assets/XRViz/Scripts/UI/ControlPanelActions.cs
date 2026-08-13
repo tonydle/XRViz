@@ -18,17 +18,27 @@ namespace Unity.Robotics
 
         private float _feedbackExpiry;
 
-        public void ClearLaserScans()
+        // Every visualisation that holds geometry between messages - laser scan, point cloud,
+        // anything added later that implements IClearableVisualization. Unity can't search for
+        // an interface directly, hence the sweep over MonoBehaviours; it costs nothing at the
+        // rate a button gets pressed.
+        public void ClearVisualizations()
         {
-            var visualizers = FindObjectsByType<LaserScanVisualizer>(
+            var behaviours = FindObjectsByType<MonoBehaviour>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None);
 
-            foreach (var visualizer in visualizers)
-                visualizer.Clear();
+            int cleared = 0;
+            foreach (var behaviour in behaviours)
+            {
+                if (behaviour is not IClearableVisualization visualization)
+                    continue;
+                visualization.Clear();
+                cleared++;
+            }
 
-            ShowFeedback(visualizers.Length == 0
-                ? "<color=#FFB300>no laser scan in the scene</color>"
-                : $"cleared {Count(visualizers.Length, "laser scan")}");
+            ShowFeedback(cleared == 0
+                ? "<color=#FFB300>nothing to clear</color>"
+                : $"cleared {Count(cleared, "visualisation")}");
         }
 
         // Note this moves the control panel too - its own handle is one of the anchors. That's

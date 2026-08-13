@@ -21,6 +21,7 @@ Branch: `camdev`. Dates are commit dates.
 | 2026-08-07 | `6951ab6` | Cameron Johns | Android build fixes, ray grab, dynamic topic subscription |
 | *uncommitted* | — | Cameron Johns | Generic placement handle + laser scan visualisation |
 | *uncommitted* | — | Cameron Johns | Handle colour-coding, panel styling, clear/reset actions |
+| *uncommitted* | — | Cameron Johns | RGBD point cloud anchored to a movable origin |
 
 ---
 
@@ -231,6 +232,83 @@ register" looked the same; now they don't.
 > Status: written but not compiled or run. Regenerate via
 > **XRViz → Create MR MVP Scene (UR3e)**.
 
+## Phase 8 — RGBD point cloud with a movable origin (uncommitted)
+
+A point cloud from a simulated RGBD camera, whose **GameObject is the cloud's origin**: the
+optical centre sits on the object and the cloud projects out along its +Z, so parking the green
+handle where the real camera stands lands the virtual geometry on the real geometry.
+
+Deliberately *not* built on `RosSubscriberPointCloud2`. A sim publishes depth and colour images;
+`PointCloud2` would mean serialising a structured cloud on the ROS side and parsing it back on
+the main thread in Unity, to arrive at exactly the same points the images already contain.
+
+### What the existing pipeline could and couldn't give
+
+`PointCloudRosGPU` already passes `transform.localToWorldMatrix` into its compute shader, so the
+depth-image path was *already* origin-anchored — the "not handle-movable" note in `CLAUDE.md` was
+true only of the `PointCloud2` variant, and has been narrowed. What it could not give:
+
+- It takes `CompressedImage`, which needs `image_transport` republishers a sim doesn't run, and
+  quantises depth to a 16-bit PNG when the sim's `32FC1` depth is already exact metric float.
+- Its depth decode hardcodes 16-bit millimetres.
+- It treats the camera frame as FLU.
+- It requires the image to divide by 8, silently dropping the remainder.
+- `PointCloudSquares.shader` has no stereo support and uses a geometry shader.
+
+So: a new subscriber, compute shader, render shader and visualiser, with the old path left intact.
+
+### Optical frame is not FLU
+
+The convention most likely to waste an afternoon. `FLU.ConvertToRUF` is the standing rule in this
+project, and it is the *wrong* transform for a camera. A `*_optical_frame` is right-down-forward
+(REP 103/145, and the comment in `sensor_msgs/Image` itself), not front-left-up, so the conversion
+to Unity is a plain Y flip — `(x, -y, z)`. The FLU shuffle lands the cloud on its side, which is
+what the older compute shader does. `CLAUDE.md` now carries the exception.
+
+### Encoding-driven upload
+
+The old `RosSubscriberImage` was hardcoded to `TextureFormat.R8` and never read `encoding`, so it
+could carry neither `rgb8` colour nor `32FC1` depth. Rewritten to pick the format from the
+message, and to expose `GetDepthMetersPerUnit()` so the consumer doesn't care whether it was
+handed `R16` millimetres (×65535×0.001, because R16 is UNorm) or `RFloat` metres (×1).
+
+Two upload traps: `step` may carry row padding that `LoadRawTextureData` won't accept, so padded
+frames are repacked into an exactly-sized reused buffer; and **no vertical flip is applied on
+purpose** — ROS data starts top-left, Unity fills from bottom-left, and the two cancel so that
+texel `(x, y)` is ROS pixel `(x, y)`, which is what keeps pixel coordinates agreeing with the
+intrinsics.
+
+### Rendering without a geometry shader
+
+`PointCloudBillboard.shader` expands six vertices per point in the *vertex* shader from
+`SV_VertexID`. Adreno has no native geometry stage — the driver emulates it, and on a 300k-point
+cloud that emulation is the frame budget — and an ordinary vertex shader gets
+`UNITY_VERTEX_OUTPUT_STEREO` for free, so the cloud reaches both eyes. Invalid points are marked
+alpha 0 and pushed outside the clip volume, discarded before rasterisation rather than costing
+fill.
+
+### The limit is bandwidth, not the GPU
+
+Raw 640×480 `rgb8` is 900 KB a frame; 640×480 `32FC1` depth is 1.2 MB. At 30 Hz that is ~60 MB/s
+over a TCP socket to a headset on wifi, which will not work. This has to be throttled on the ROS
+side — lower rate or smaller resolution. `_decimation` thins what is *drawn* (default 2, a quarter
+of the points) and matters for frame rate, but the bytes have already crossed the network.
+
+### Smaller things this forced
+
+- `IClearableVisualization`, so **Clear Data** (was "Clear Scan") finds any visualisation holding
+  geometry instead of naming types.
+- `CreatePlacementHandle` gained a `rotation` argument. The cloud's handle is the only one with
+  `_yawOnly` off — a camera has to be aimed — and a handle whose target keeps a non-identity
+  rotation must *start* at that rotation, or the first grab snaps the target to identity.
+- The topic browser's target label now shows the GameObject name: with two `sensor_msgs/Image`
+  subscribers both reading "Image", picking the wrong one silently retargeted colour instead of
+  depth.
+
+> Status: written but not compiled or run. Regenerate via
+> **XRViz → Create MR MVP Scene (UR3e)**, and assign the compute shader by hand if the generator
+> warns it couldn't find it.
+
 ---
 
 ## Open items
@@ -238,7 +316,8 @@ register" looked the same; now they don't.
 | Item | Detail |
 |---|---|
 | **Android build blocked** | `Cannot include plugin 'assimp.dll' … already added`. Four URDF Importer plugins (`AssimpNet.dll`, `win/x86/assimp.dll`, `win/x86_64/assimp.dll`, `linux/x86_64/libassimp.so`) have "Any Platform" ticked with no Android exclusion, so the Android post-processor collects both `assimp.dll`s and they collide on filename. Fix requires embedding or forking the package — `Library/PackageCache` edits are wiped on reimport. **Decision pending.** |
-| **PointCloud2 not headset-ready** | `RosSubscriberPointCloud2` parses on the main thread (307k points × 4 `BitConverter` calls + a `Color` alloc each), *requires* an `rgb` field and throws without one, and does no coordinate conversion. `PointCloudRosGPU_PointCloud2` draws at the world origin, ignoring its Transform. |
-| **Legacy point cloud shader** | `PointCloudSquares.shader` has no `UNITY_VERTEX_OUTPUT_STEREO` support and uses a geometry shader, which Quest's Adreno GPU emulates slowly. |
+| **PointCloud2 not headset-ready** | `RosSubscriberPointCloud2` parses on the main thread (307k points × 4 `BitConverter` calls + a `Color` alloc each), *requires* an `rgb` field and throws without one, and does no coordinate conversion. `PointCloudRosGPU_PointCloud2` draws at the world origin, ignoring its Transform. Unaddressed by Phase 8, which took the depth-image route instead — still needed for a lidar or a stereo cloud that only ever exists as `PointCloud2`. |
+| **Legacy point cloud shader** | `PointCloudSquares.shader` has no `UNITY_VERTEX_OUTPUT_STEREO` support and uses a geometry shader, which Quest's Adreno GPU emulates slowly. Still used by `PointCloudRosGPU` and the `PointCloud2` variant; `PointCloudBillboard.shader` is the drop-in replacement if those get revived. |
+| **RGBD bandwidth** | Raw colour + depth at 640×480/30 Hz is ~60 MB/s over the ROS TCP socket. Phase 8 documents this and decimates what it *draws*, but nothing throttles the stream — that has to happen ROS-side, or eventually via a `CompressedImage` path into the same visualiser. |
 | **Phantom ray hits** | `ControlPanelMenuToggle` hides panels via `Canvas.enabled = false`, which does not disable the `GraphicRaycaster` or `RayInteractable` — a hidden panel can still swallow ray hits. More relevant now that three popups share the group. |
 | **Deleted followers** | `RobotPlacementFollower` / `PanelPlacementFollower` were removed. Their only remaining consumers were the 23 scenes in `Assets/_Recovery/`, which is gitignored and untracked; those will show missing scripts. |

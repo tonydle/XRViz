@@ -15,7 +15,7 @@ XRViz is a Unity project providing XR (Meta Quest / OpenXR) visualization and te
 ### Required external pieces
 
 - **ROS side**: a running `ros_tcp_endpoint` on the ROS 2 machine. The connection IP/port is serialized in `Assets/Resources/ROSConnectionPrefab.prefab` (`m_RosIPAddress`, `m_RosPort` — currently 192.168.50.250:10000).
-- **LightBuzz JPEG plugin**: `Assets/LightBuzz_Jpeg*` is gitignored (paid asset) but required — `RosSubscriberCompressedImage.cs` won't compile without it. It must be installed locally.
+- **No LightBuzz JPEG plugin is needed** (this file used to claim otherwise). `RosSubscriberCompressedImage.cs` decodes with Unity's built-in `ImageConversion.LoadImage` plus the project's own `Utils/CompressedDepthPNGDecoder`; nothing under `Assets/` references LightBuzz, it isn't in `.gitignore`, and the folder isn't present. The project compiles without it.
 
 ## Architecture
 
@@ -36,7 +36,8 @@ ROS integration is built on Unity's ROS-TCP-Connector package (`ROSConnection.Ge
 
    Two rules for anything new in here:
    - **Convert coordinates with `FLU.ConvertToRUF`** from `Unity.Robotics.ROSTCPConnector.ROSGeometry` — ROS is right-handed Z-up, Unity left-handed Y-up. Don't hand-roll it. (`RosSubscriberPointCloud2` predates this rule and does no conversion — its clouds land rotated and mirrored.)
-   - **Draw into a Mesh under a MeshFilter, not `Graphics.DrawProcedural`.** DrawProcedural renders in world space and ignores the GameObject's Transform, so a `PlacementHandle` can't move it. This is why `PointCloudRosGPU_PointCloud2` isn't handle-movable.
+     - **Exception: camera optical frames.** A `*_optical_frame` is right-down-forward (REP 103/145), not FLU, so the conversion is a plain Y flip — `(x, -y, z)`. Using `FLU.ConvertToRUF` there lands the cloud on its side, which is what `PointCloudReconstructionGPU.compute` does.
+   - **The GameObject's Transform must place the visualisation**, so a `PlacementHandle` can move it. Usually that means drawing into a Mesh under a MeshFilter, because `Graphics.DrawProcedural` renders in world space and ignores the Transform — that's why `PointCloudRosGPU_PointCloud2` isn't handle-movable. A GPU pipeline may instead pass `transform.localToWorldMatrix` into the compute shader and bake it into the emitted positions (`DepthImagePointCloud`, and `PointCloudRosGPU` already did this); then remember to recentre the bounds passed to the draw call each frame or it gets frustum-culled once moved.
 
    Visualisations need an unlit, vertex-colour-capable, stereo-aware shader: `Shaders/VertexColorUnlit.shader`. Built-in `Unlit/Color` ignores vertex colours; lit shaders render near-black under passthrough; and without the `UNITY_VERTEX_OUTPUT_STEREO` macros a mesh draws to one eye only on Quest. `Shaders/HandleUnlit.shader` is the solid-colour counterpart for meshes with no vertex colour channel (the handle spheres) — same stereo macros, plus a baked shape ramp so a sphere doesn't read as a flat disc.
 
@@ -48,11 +49,13 @@ ROS integration is built on Unity's ROS-TCP-Connector package (`ROSConnection.Ge
 
    Panels are styled by `StylePanel` in the scene generator: a near-opaque dark background plus a header bar. The background is functional, not decoration — a translucent canvas over passthrough video of a light wall is unreadable. Anything new floating in world space needs the same treatment.
 
-   A visualiser that draws into a mesh keeps drawing after its topic goes quiet, and a frozen frame looks like a live one. Give it an arrival-time staleness timeout (`Time.realtimeSinceStartup` at receipt, *not* the message header stamp) and a `Clear()` that also clears the subscriber's parsed state — clearing only the mesh lets the next frame rebuild it from the cached message. `LaserScanVisualizer` is the reference.
+   A visualiser that holds geometry keeps drawing after its topic goes quiet, and a frozen frame looks like a live one. Implement `IClearableVisualization` (which the panel's **Clear Data** button discovers automatically), give it an arrival-time staleness timeout (`Time.realtimeSinceStartup` at receipt, *not* the message header stamp), and make `Clear()` also clear the subscriber's parsed state — clearing only the geometry lets the next frame rebuild it from the cached message. `LaserScanVisualizer` and `DepthImagePointCloud` are the references.
 
-### GPU point cloud pipeline
+### GPU point cloud pipelines
 
-`PointCloudRosGPU.cs` pairs color+depth `CompressedImage` subscribers with their `CameraInfo` subscribers, waits for both intrinsics via coroutine, then each frame uploads the two textures to `Assets/XRViz/Shaders/PointCloudReconstructionGPU.compute`, which writes position/color compute buffers rendered with `Graphics.DrawProcedural` and the `PointCloudSquares*` shaders (point topology, no mesh). Dispatch is `width/8 × height/8`, so image dimensions must be divisible by 8. Compute buffers are sized from the **color** camera info and released in `OnDestroy`.
+**Current (`DepthImagePointCloud.cs`)** — the RGBD path to use. Raw `sensor_msgs/Image` colour + depth (`RosSubscriberImage` picks the texture format from the message's `encoding`, so `32FC1` metres and `16UC1` millimetres both work) plus the depth `CameraInfo`, reconstructed by `Shaders/DepthImagePointCloudGPU.compute` and drawn with `Shaders/PointCloudBillboard.shader` — six vertices per point expanded in the vertex shader from `SV_VertexID`, no geometry shader, stereo-aware. The visualiser's Transform is the cloud's origin (see the Transform rule above). Bandwidth, not GPU, is the limit: raw 640×480 colour + depth at 30 Hz is ~60 MB/s over the TCP socket — throttle on the ROS side.
+
+**Legacy (`PointCloudRosGPU.cs`)** — pairs color+depth `CompressedImage` subscribers with their `CameraInfo` subscribers, waits for both intrinsics via coroutine, then each frame uploads the two textures to `Assets/XRViz/Shaders/PointCloudReconstructionGPU.compute`, which writes position/color compute buffers rendered with `Graphics.DrawProcedural` and the `PointCloudSquares*` shaders (point topology, no mesh). Dispatch is `width/8 × height/8`, so image dimensions must be divisible by 8. Compute buffers are sized from the **color** camera info and released in `OnDestroy`.
 
 ### Robot assets
 

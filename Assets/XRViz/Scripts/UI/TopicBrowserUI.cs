@@ -45,6 +45,12 @@ namespace Unity.Robotics
         [SerializeField] private bool _refreshOnOpen = true;
 
         private readonly List<IRosTopicBinding> _bindings = new List<IRosTopicBinding>();
+
+        // GameObject name per binding. Message type alone stopped being enough to tell targets
+        // apart once the point cloud arrived with two sensor_msgs/Image subscribers - both would
+        // read "Image", and picking the wrong one silently retargets colour instead of depth.
+        private readonly List<string> _bindingNames = new List<string>();
+
         private readonly List<string> _topics = new List<string>();
 
         // Last full reply, kept so switching target re-filters instantly instead of costing
@@ -68,7 +74,10 @@ namespace Unity.Robotics
                 foreach (var target in _targets)
                 {
                     if (target is IRosTopicBinding binding)
+                    {
                         _bindings.Add(binding);
+                        _bindingNames.Add(target.gameObject.name);
+                    }
                     else if (target != null)
                         Debug.LogWarning($"[XRViz] {target.GetType().Name} on '{target.name}' does not " +
                             $"implement {nameof(IRosTopicBinding)}; skipping it in the topic browser.", this);
@@ -249,8 +258,9 @@ namespace Unity.Robotics
             }
 
             string topic = string.IsNullOrEmpty(binding.Topic) ? "<none>" : binding.Topic;
-            _targetLabel.text = $"{_targetIndex + 1}/{_bindings.Count}  <b>{ShortTypeName(binding.RosMessageName)}</b>" +
-                $"\n<size=80%>{topic}</size>";
+            string name = _targetIndex < _bindingNames.Count ? _bindingNames[_targetIndex] : "?";
+            _targetLabel.text = $"{_targetIndex + 1}/{_bindings.Count}  <b>{name}</b>" +
+                $"\n<size=80%>{ShortTypeName(binding.RosMessageName)} · {topic}</size>";
         }
 
         // "sensor_msgs/JointState" -> "JointState"; the package prefix is just noise in a label

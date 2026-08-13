@@ -34,6 +34,9 @@ XRViz layer only adds the ROS side.
      trolley's top-front-left corner, already grab-enabled (see "Moving things around" below)
    - a **Laser Scan** object (`RosSubscriberLaserScan` + `LaserScanVisualizer`, default
      topic `/laser_scan`) with its own magenta **Laser Scan Placement Handle**
+   - a **Point Cloud** object (`DepthImagePointCloud` + colour/depth `RosSubscriberImage` and a
+     `RosSubscriberCameraInfo` on named children) with a green **Point Cloud Placement Handle**
+     that *is* the cloud's origin — see "RGBD point cloud" below
    - a world-space **ROS Control Panel** group holding three sibling canvases:
      - the **ROS Status Panel** (`RosConnectionStatusUI` + `ControlPanelActions`) showing IP,
        connection state, and message freshness, a key for the handle colours, and
@@ -80,16 +83,21 @@ keypad and topic browser are popups toggled from it.
 | **Connect** / **Disconnect** | the ROS TCP connection (`RosConnectionStatusUI`) |
 | **Edit IP** | shows/hides the numeric keypad — no native VR keyboard is installed to hook a `TMP_InputField` to |
 | **Topics** | shows/hides the topic browser (below) |
-| **Clear Scan** | wipes the drawn laser scan (see "Clearing a stale scan") |
+| **Clear Data** | wipes every visualisation holding geometry — laser scan, point cloud, anything implementing `IClearableVisualization` |
 | **Reset Anchors** | puts every placement handle back where it started (see "Putting them back") |
 
 Below the status readout is the **anchor key**: a coloured dot per placement handle, generated
 from the same `k_HandleStyles` table as the handles themselves.
 
 `ControlPanelActions` owns the two scene-wide buttons and shows a one-line confirmation under
-them for a couple of seconds ("cleared 1 laser scan", "reset 3 anchors"). Without it, pressing
-**Clear Scan** on an already-empty scan is indistinguishable from a dead button — which, on a
-ray-driven UI where a near-miss produces exactly nothing, is a real failure mode.
+them for a couple of seconds ("cleared 2 visualisations", "reset 4 anchors"). Without it, pressing
+**Clear Data** when there is nothing to clear is indistinguishable from a dead button — which, on
+a ray-driven UI where a near-miss produces exactly nothing, is a real failure mode.
+
+**Clear Data** finds implementors of `IClearableVisualization` rather than holding a serialized
+list, so a visualisation added later is picked up with no wiring. Unity cannot search for an
+interface directly, hence the sweep over `MonoBehaviour`s — irrelevant at the rate a button is
+pressed.
 
 ### Styling
 
@@ -196,6 +204,116 @@ Both go through `LaserScanVisualizer.Clear()`, which also calls `RosSubscriberLa
 Clearing only the mesh would not be enough — the visualiser rebuilds it every frame from the
 subscriber's last parsed message, so the sweep would reappear on the next frame.
 
+### RGBD point cloud
+
+`DepthImagePointCloud` reconstructs a cloud from an RGBD camera: a depth image, a colour image,
+and the depth camera's `CameraInfo`. Reconstruction runs on the GPU
+(`Shaders/DepthImagePointCloudGPU.compute`), and the result is drawn as camera-facing squares
+with `Shaders/PointCloudBillboard.shader`.
+
+Generated topics — the conventional names a simulator publishes:
+
+| Child object | Topic | Type |
+| --- | --- | --- |
+| `Color Image` | `/camera/color/image_raw` | `sensor_msgs/Image` |
+| `Depth Image` | `/camera/depth/image_raw` | `sensor_msgs/Image` |
+| `Depth Camera Info` | `/camera/depth/camera_info` | `sensor_msgs/CameraInfo` |
+
+All three are retargetable from the Topics browser — they appear in its ◀ ▶ list by GameObject
+name, which is why the two `sensor_msgs/Image` subscribers live on named children rather than
+stacked on the cloud root.
+
+#### The GameObject is the origin
+
+This is the point of the thing. The visualiser hands its own `localToWorldMatrix` to the compute
+shader as `originTransform`, and every point is projected out of it: the camera's optical centre
+sits exactly on the GameObject and the cloud extends along its **+Z**. Park the green handle
+where the real camera stands in the room and the virtual geometry lands on the real geometry.
+
+It is the one handle generated with `_yawOnly` **off**, because a camera has to be aimed and
+flattening its rotation to yaw would throw the pitch away. That has a consequence worth knowing:
+a handle whose target keeps a non-identity rotation must *start* at that rotation, or the first
+grab snaps the target to identity. `CreatePlacementHandle` takes a `rotation` argument for this,
+and the handle's `_offset` is expressed in the rotated space so it keeps sitting below the origin
+as the cloud is turned.
+
+#### Raw `sensor_msgs/Image`, not `CompressedImage`
+
+`RosSubscriberImage` decodes raw images, choosing the texture format from the message's own
+`encoding` field: `rgb8`, `bgr8`, `rgba8`, `bgra8`, `mono8`/`8UC1`, `mono16`/`16UC1`, `32FC1`.
+
+Raw because that is what a simulator emits natively — the compressed variants only exist if you
+additionally run `image_transport` republishers — and because it keeps the depth exact.
+`compressedDepth` quantises to a 16-bit PNG, whereas a sim's `32FC1` depth is already metric
+float.
+
+`GetDepthMetersPerUnit()` reports what a texel must be multiplied by to get metres, so the
+consumer never has to know which it got:
+
+| Encoding | Texture format | Factor | Why |
+| --- | --- | --- | --- |
+| `32FC1` | `RFloat` | 1 | samples the stored value; already metres |
+| `16UC1` | `R16` | 65535 × 0.001 | R16 is UNorm so sampling gives [0,1]; uint16 depth is millimetres |
+
+Two upload details that are easy to get wrong:
+
+- **`step` may carry row padding.** It is the full row length in bytes and is allowed to exceed
+  `width × bytes-per-pixel`, while `LoadRawTextureData` wants it tightly packed. Padded frames are
+  repacked into an exactly-sized scratch buffer, kept between messages so it doesn't allocate a
+  megabyte per frame.
+- **No vertical flip is applied, deliberately.** ROS image data starts top-left, Unity's
+  `LoadRawTextureData` fills from bottom-left, and the two cancel: texel `(x, y)` *is* ROS pixel
+  `(x, y)`, which is what keeps the pixel coordinates agreeing with the camera intrinsics. The
+  texture therefore renders upside down if you put it straight on a quad — flip it there.
+
+#### Optical frame, not FLU
+
+The frame convention here is the one thing most likely to bite. A camera's `*_optical_frame` is
+**not** the FLU body frame that `FLU.ConvertToRUF` converts from. Per REP 103/145 — and the
+comment in `sensor_msgs/Image` itself — an optical frame is right-down-forward: +x right across
+the image, +y down, +z into the scene.
+
+Unity is right-up-forward, so the conversion is a plain Y flip:
+
+```hlsl
+float3 local = float3(xRight, -yDown, depth);   // NOT FLU.ConvertToRUF
+```
+
+Applying the FLU conversion instead lands the cloud on its side. (The older
+`PointCloudReconstructionGPU.compute` treats the camera frame as FLU, which is why its clouds
+come out rotated.)
+
+#### Rendering
+
+Six vertices per point, expanded in the *vertex* shader from `SV_VertexID` and issued as
+`MeshTopology.Triangles`. Not a geometry shader, and not `PointCloudSquares.shader`, which fails
+on Quest twice over: it has no `UNITY_VERTEX_OUTPUT_STEREO` so it draws to one eye under
+single-pass instanced rendering, and Adreno has no native geometry stage — the driver emulates it,
+which on a 300k-point cloud is the whole frame budget.
+
+Points with no valid depth are marked alpha 0 by the compute shader and pushed outside the clip
+volume by the vertex shader, so they're discarded before rasterisation rather than costing fill.
+
+`Graphics.DrawProcedural` is used rather than a mesh. That normally breaks handle movement — it
+renders in world space and ignores the Transform — but here the Transform is already baked into
+the positions by the compute shader, which is the *reason* the cloud is origin-anchored. The
+bounds passed to the draw are recentred on the transform each frame so it isn't frustum-culled
+after being moved.
+
+#### Bandwidth is the real limit
+
+Not the GPU. Raw 640×480 `rgb8` is 900 KB a frame and 640×480 `32FC1` depth is 1.2 MB; at 30 Hz
+that is roughly **60 MB/s over a TCP socket to a headset on wifi**, which will not work.
+
+Throttle on the ROS side — a lower publish rate, or a smaller camera resolution — before blaming
+Unity. `_decimation` (default 2, so a quarter of the points) thins what gets *drawn* and is worth
+tuning for frame rate, but the bytes have already crossed the network by the time it applies.
+
+Other tunables: `_pointSize` (metres, default 12 mm), `_minRange`/`_maxRange` (metres, also the
+cull for NaN and no-return depth), `_staleAfterSeconds`, and `_drawWithoutColor` — which draws
+flat grey from depth alone when no colour image has arrived, so "no depth" and "no colour" don't
+look identical while bringing a camera up.
+
 ## Moving things around
 
 `PlacementHandle` is the one generic handle — a grabbable sphere that repositions whatever it is
@@ -212,6 +330,7 @@ Three ~4 cm spheres, colour-coded, with a matching key on the status panel:
 | Robot Placement Handle | amber | the UR3e (via `ArticulationBody.TeleportRoot`) |
 | Panel Placement Handle | cyan | the whole ROS Control Panel group |
 | Laser Scan Placement Handle | magenta | the laser scan visualisation |
+| Point Cloud Placement Handle | green | the RGBD cloud's **origin** — see "RGBD point cloud" |
 
 Spheres rather than cubes because a cube's silhouette changes with viewing angle — at this size
 it reads as a different object depending on where you stand. Amber/cyan/magenta rather than

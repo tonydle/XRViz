@@ -27,8 +27,10 @@ public static class XRVizCreateMVPScene
         "Directional Light", k_RobotObjectName, "Robot Placement Handle",
         "ROS Control Panel", "Panel Placement Handle",
         "Laser Scan", "Laser Scan Placement Handle",
+        "Point Cloud", "Point Cloud Placement Handle",
         "ROS Status Panel", // legacy: was a root object before the panel group was introduced
     };
+    const string k_PointCloudComputePath = "Assets/XRViz/Shaders/DepthImagePointCloudGPU.compute";
     // Canvases are authored in 400x300-style UI units and scaled down to metres
     const float k_PanelUnitsToMeters = 0.001f;
     static readonly Vector3 k_RobotBasePosition = new Vector3(0f, -0.7f, 0.9f);
@@ -70,9 +72,15 @@ public static class XRVizCreateMVPScene
         Label = "Laser scan",
         Color = new Color(0.85f, 0.33f, 0.95f), // magenta
     };
+    static readonly HandleStyle k_PointCloudHandleStyle = new HandleStyle
+    {
+        ObjectName = "Point Cloud Placement Handle",
+        Label = "Point cloud origin",
+        Color = new Color(0.35f, 0.90f, 0.45f), // green
+    };
     static readonly HandleStyle[] k_HandleStyles =
     {
-        k_RobotHandleStyle, k_PanelHandleStyle, k_ScanHandleStyle,
+        k_RobotHandleStyle, k_PanelHandleStyle, k_ScanHandleStyle, k_PointCloudHandleStyle,
     };
 
     const string k_MaterialFolder = "Assets/XRViz/Materials";
@@ -94,7 +102,9 @@ public static class XRVizCreateMVPScene
     static readonly Color k_ButtonNegative = new Color(0.44f, 0.16f, 0.16f);
 
     const float k_HeaderHeight = 54f;
-    static readonly Vector2 k_StatusPanelSize = new Vector2(420f, 500f);
+    // Tall enough for the status block, a key row per handle, three button rows and the
+    // feedback line - see the layout constants in Run(), which are all measured from the centre
+    static readonly Vector2 k_StatusPanelSize = new Vector2(420f, 550f);
     static readonly Vector2 k_ButtonSize = new Vector2(190f, 50f);
 
     [MenuItem("XRViz/Create MR MVP Scene (UR3e)")]
@@ -178,6 +188,52 @@ public static class XRVizCreateMVPScene
         CreatePlacementHandle(k_ScanHandleStyle, scanPosition + new Vector3(0f, -0.15f, 0f),
             0.03f, target: scanGo.transform, articulationBody: null, offset: new Vector3(0f, 0.15f, 0f));
 
+        // RGBD point cloud. Its Transform IS the cloud's origin - the camera's optical centre
+        // sits on this object and the cloud projects out along its +Z - so placing the handle
+        // where the real camera stands in the room lands the virtual geometry on the real
+        // geometry. Aimed back at the robot to start with, which is the usual thing to look at.
+        var cloudPosition = new Vector3(-1.2f, 1.5f, 2.2f);
+        var cloudRotation = Quaternion.LookRotation(
+            (k_RobotBasePosition + new Vector3(0f, 1.1f, 0f)) - cloudPosition, Vector3.up);
+        var cloudGo = new GameObject("Point Cloud");
+        cloudGo.transform.SetPositionAndRotation(cloudPosition, cloudRotation);
+
+        // Raw sensor_msgs/Image on child objects rather than three components stacked on the
+        // cloud root: two of them are the same type, and in the Inspector (and in the topic
+        // browser's target list) "Color Image" and "Depth Image" are the only thing that tells
+        // them apart at a glance. Topic defaults are the conventional RGBD names a sim publishes.
+        var colorSub = CreateImageSubscriber(cloudGo.transform, "Color Image", "/camera/color/image_raw");
+        var depthSub = CreateImageSubscriber(cloudGo.transform, "Depth Image", "/camera/depth/image_raw");
+
+        var infoGo = new GameObject("Depth Camera Info");
+        infoGo.transform.SetParent(cloudGo.transform, false);
+        var depthInfoSub = infoGo.AddComponent<RosSubscriberCameraInfo>();
+        var infoSo = new SerializedObject(depthInfoSub);
+        infoSo.FindProperty("_topic").stringValue = "/camera/depth/camera_info";
+        infoSo.ApplyModifiedPropertiesWithoutUndo();
+
+        var cloud = cloudGo.AddComponent<DepthImagePointCloud>();
+        var cloudSo = new SerializedObject(cloud);
+        cloudSo.FindProperty("_colorSub").objectReferenceValue = colorSub;
+        cloudSo.FindProperty("_depthSub").objectReferenceValue = depthSub;
+        cloudSo.FindProperty("_depthInfoSub").objectReferenceValue = depthInfoSub;
+        var compute = AssetDatabase.LoadAssetAtPath<ComputeShader>(k_PointCloudComputePath);
+        if (compute == null)
+            Debug.LogWarning($"[XRViz] Point cloud compute shader not found at {k_PointCloudComputePath}; " +
+                "assign it on the Point Cloud object by hand or the cloud will disable itself.");
+        cloudSo.FindProperty("_computeShader").objectReferenceValue = compute;
+        cloudSo.ApplyModifiedPropertiesWithoutUndo();
+
+        // yawOnly is off here, unlike every other handle: a camera has to be *aimed*, and
+        // flattening its rotation to yaw would throw away the pitch. The handle therefore starts
+        // at the cloud's own rotation, and the offset is expressed in that rotated space so the
+        // handle keeps sitting just below the origin as the cloud is turned.
+        var cloudHandleOffset = new Vector3(0f, -0.14f, 0f);
+        CreatePlacementHandle(k_PointCloudHandleStyle, cloudPosition + cloudHandleOffset, 0.035f,
+            target: cloudGo.transform, articulationBody: null,
+            offset: Quaternion.Inverse(cloudRotation) * -cloudHandleOffset,
+            yawOnly: false, rotation: cloudRotation);
+
         // World-space ROS control panel: the status panel and the IP keypad are sibling
         // Canvases under a plain Transform, NOT one Canvas nested inside the other.
         // PointableCanvasModule.FindFirstRaycastWithinCanvas discards any raycast hit whose
@@ -202,11 +258,11 @@ public static class XRVizCreateMVPScene
         // Everything below the header is laid out from the canvas centre, so the numbers here
         // read directly as "this far above/below the middle of the panel"
         var text = CreateLabel(canvasGo.transform, "Status Text", "ROS status…",
-            new Vector2(0f, 129f), new Vector2(384f, 110f), 22f, TextAlignmentOptions.TopLeft);
+            new Vector2(0f, 152f), new Vector2(384f, 110f), 22f, TextAlignmentOptions.TopLeft);
 
-        CreateDivider(canvasGo.transform, 64f, 384f);
-        CreateAnchorKey(canvasGo.transform, headingY: 50f, firstRowY: 22f, rowStep: 26f);
-        CreateDivider(canvasGo.transform, -48f, 384f);
+        CreateDivider(canvasGo.transform, 86f, 384f);
+        CreateAnchorKey(canvasGo.transform, headingY: 72f, firstRowY: 44f, rowStep: 26f);
+        CreateDivider(canvasGo.transform, -52f, 384f);
 
         var jointStateSub = robot.GetComponentInChildren<RosSubscriberJointState>();
 
@@ -218,19 +274,19 @@ public static class XRVizCreateMVPScene
 
         var actions = panelRootGo.AddComponent<ControlPanelActions>();
 
-        var connectButton = CreateButton(canvasGo.transform, "Connect", new Vector2(-105f, -72f), k_ButtonSize, 20f, true, k_ButtonPositive);
+        var connectButton = CreateButton(canvasGo.transform, "Connect", new Vector2(-105f, -76f), k_ButtonSize, 20f, true, k_ButtonPositive);
         UnityEventTools.AddVoidPersistentListener(connectButton.onClick, statusUi.Connect);
-        var disconnectButton = CreateButton(canvasGo.transform, "Disconnect", new Vector2(105f, -72f), k_ButtonSize, 20f, true, k_ButtonNegative);
+        var disconnectButton = CreateButton(canvasGo.transform, "Disconnect", new Vector2(105f, -76f), k_ButtonSize, 20f, true, k_ButtonNegative);
         UnityEventTools.AddVoidPersistentListener(disconnectButton.onClick, statusUi.Disconnect);
-        var editIpButton = CreateButton(canvasGo.transform, "Edit IP", new Vector2(-105f, -128f), k_ButtonSize, 20f, true, k_ButtonAccent);
-        var topicsButton = CreateButton(canvasGo.transform, "Topics", new Vector2(105f, -128f), k_ButtonSize, 20f, true, k_ButtonAccent);
-        var clearScanButton = CreateButton(canvasGo.transform, "Clear Scan", new Vector2(-105f, -184f), k_ButtonSize, 20f, true, k_ButtonNeutral);
-        UnityEventTools.AddVoidPersistentListener(clearScanButton.onClick, actions.ClearLaserScans);
-        var resetAnchorsButton = CreateButton(canvasGo.transform, "Reset Anchors", new Vector2(105f, -184f), k_ButtonSize, 20f, true, k_ButtonNeutral);
+        var editIpButton = CreateButton(canvasGo.transform, "Edit IP", new Vector2(-105f, -132f), k_ButtonSize, 20f, true, k_ButtonAccent);
+        var topicsButton = CreateButton(canvasGo.transform, "Topics", new Vector2(105f, -132f), k_ButtonSize, 20f, true, k_ButtonAccent);
+        var clearDataButton = CreateButton(canvasGo.transform, "Clear Data", new Vector2(-105f, -188f), k_ButtonSize, 20f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(clearDataButton.onClick, actions.ClearVisualizations);
+        var resetAnchorsButton = CreateButton(canvasGo.transform, "Reset Anchors", new Vector2(105f, -188f), k_ButtonSize, 20f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(resetAnchorsButton.onClick, actions.ResetAnchors);
 
         var feedback = CreateLabel(canvasGo.transform, "Action Feedback", "",
-            new Vector2(0f, -230f), new Vector2(384f, 26f), 17f);
+            new Vector2(0f, -236f), new Vector2(384f, 26f), 17f);
         feedback.color = k_TextMuted;
         var actionsSo = new SerializedObject(actions);
         actionsSo.FindProperty("_feedback").objectReferenceValue = feedback;
@@ -239,7 +295,8 @@ public static class XRVizCreateMVPScene
         var keypadUi = CreateIpKeypad(panelRootGo.transform, statusUi);
         UnityEventTools.AddVoidPersistentListener(editIpButton.onClick, keypadUi.ToggleVisibility);
 
-        var topicBrowserUi = CreateTopicBrowser(panelRootGo.transform, new MonoBehaviour[] { jointStateSub, scanSub });
+        var topicBrowserUi = CreateTopicBrowser(panelRootGo.transform,
+            new MonoBehaviour[] { jointStateSub, scanSub, colorSub, depthSub, depthInfoSub });
         UnityEventTools.AddVoidPersistentListener(topicsButton.onClick, topicBrowserUi.ToggleVisibility);
 
         AddRayInteractionToCanvas(canvas);
@@ -252,9 +309,9 @@ public static class XRVizCreateMVPScene
         panelRootGo.AddComponent<ControlPanelMenuToggle>();
 
         // Grab handle below the panel; the panel follows, same as the robot handle. The offset
-        // clears the panel's own half-height (500 units x 0.001 = 0.5 m tall) plus a small gap.
-        CreatePlacementHandle(k_PanelHandleStyle, panelPosition + new Vector3(0f, -0.27f, 0f),
-            0.04f, target: panelRootGo.transform, articulationBody: null, offset: new Vector3(0f, 0.27f, 0f));
+        // clears the panel's own half-height (550 units x 0.001 = 55 cm tall) plus a small gap.
+        CreatePlacementHandle(k_PanelHandleStyle, panelPosition + new Vector3(0f, -0.30f, 0f),
+            0.04f, target: panelRootGo.transform, articulationBody: null, offset: new Vector3(0f, 0.30f, 0f));
 
         EditorSceneManager.SaveScene(scene, k_ScenePath);
         AddToBuildSettings(k_ScenePath);
@@ -264,9 +321,16 @@ public static class XRVizCreateMVPScene
             "objects it generates (robot, handles, ROS panel, laser scan) - Camera Rig, Passthrough, " +
             "and any other Building Blocks you've added are left alone and don't need to be re-added.\n\n" +
             "Every placement handle is a small coloured sphere - amber for the robot, cyan for the " +
-            "control panel, magenta for the laser scan, with a key on the panel itself. Each is " +
-            "movable out of the box: near grab (reach out and grab it) AND ray grab (point at it " +
-            "from a distance and hold the trigger); whatever it's pointed at follows either way.\n\n" +
+            "control panel, magenta for the laser scan, green for the point cloud origin, with a key " +
+            "on the panel itself. Each is movable out of the box: near grab (reach out and grab it) " +
+            "AND ray grab (point at it from a distance and hold the trigger); whatever it's pointed " +
+            "at follows either way.\n\n" +
+            "THE POINT CLOUD'S HANDLE IS ITS ORIGIN. The camera's optical centre sits on that green " +
+            "sphere and the cloud projects out along its +Z, so park the handle where the real " +
+            "camera stands in the room and the virtual geometry lands on the real geometry. It is " +
+            "the one handle that takes full rotation rather than yaw only, because a camera has to " +
+            "be aimed. Topics default to /camera/color/image_raw, /camera/depth/image_raw and " +
+            "/camera/depth/camera_info - retarget them from the Topics browser.\n\n" +
             "The panel's buttons are ray-enabled (point + trigger, like a normal menu):\n" +
             "  Connect / Disconnect - the ROS TCP connection\n" +
             "  Edit IP - shows a numeric keypad (no native VR keyboard is installed) to retype the " +
@@ -274,8 +338,9 @@ public static class XRVizCreateMVPScene
             "  Topics - shows a browser that asks the endpoint what it's advertising and re-points a " +
             "subscriber at a different topic without leaving the headset; its ◀ ▶ picks which " +
             "subscriber, and the list is filtered to that subscriber's message type\n" +
-            "  Clear Scan - wipes the drawn laser scan (it also clears itself automatically after " +
-            "3 s without a message, so a dropped sensor doesn't leave a stale sweep hanging)\n" +
+            "  Clear Data - wipes every visualisation holding geometry (laser scan, point cloud). " +
+            "They also clear themselves after 3 s without a message, so a dropped sensor doesn't " +
+            "leave a stale frame hanging in the room looking live\n" +
             "  Reset Anchors - puts every placement handle, and what it carries, back where this " +
             "generator put it (including the panel itself)\n\n" +
             "The panel starts hidden and toggles with the left controller's Menu button.\n\n" +
@@ -498,12 +563,15 @@ public static class XRVizCreateMVPScene
     // PlacementHandle is generic - pass articulationBody for a robot (its root ignores writes
     // to its Transform and has to be teleported), target for everything else.
     static GameObject CreatePlacementHandle(HandleStyle style, Vector3 position, float size,
-        Transform target, ArticulationBody articulationBody, Vector3 offset, bool yawOnly = true)
+        Transform target, ArticulationBody articulationBody, Vector3 offset, bool yawOnly = true,
+        Quaternion? rotation = null)
     {
         var handle = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         handle.name = style.ObjectName;
         handle.transform.localScale = Vector3.one * size;
-        handle.transform.position = position;
+        // The handle must start at the target's own rotation whenever yawOnly is off, or the
+        // first grab snaps the target to identity and throws away however it was aimed
+        handle.transform.SetPositionAndRotation(position, rotation ?? Quaternion.identity);
 
         var material = GetHandleMaterial(style);
         if (material != null)
@@ -519,6 +587,17 @@ public static class XRVizCreateMVPScene
 
         AddGrabInteraction(handle, handle.transform);
         return handle;
+    }
+
+    static RosSubscriberImage CreateImageSubscriber(Transform parent, string name, string topic)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        var sub = go.AddComponent<RosSubscriberImage>();
+        var so = new SerializedObject(sub);
+        so.FindProperty("_topic").stringValue = topic;
+        so.ApplyModifiedPropertiesWithoutUndo();
+        return sub;
     }
 
     // One material asset per handle colour, created on first run and rewritten on every later
