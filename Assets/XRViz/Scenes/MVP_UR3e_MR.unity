@@ -1785,6 +1785,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &129115690 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8878372272065413484, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &129115696
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 129115690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_inner_finger_joint
 --- !u!1 &137615878
 GameObject:
   m_ObjectHideFlags: 0
@@ -2198,6 +2216,24 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.008180305, y: -0.0053694975, z: -0.020344593}
     m_Extent: {x: 0.046097815, y: 0.067293465, z: 0.0557265}
   m_DirtyAABB: 0
+--- !u!1 &174117465 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7700688361200651494, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &174117471
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 174117465}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: shoulder_lift_joint
 --- !u!1 &179253526
 GameObject:
   m_ObjectHideFlags: 0
@@ -2261,6 +2297,24 @@ Transform:
   - {fileID: 932971378}
   m_Father: {fileID: 1250485627}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &190095506 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2780117253100430097, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &190095512
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 190095506}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_outer_knuckle_joint
 --- !u!1 &191122984
 GameObject:
   m_ObjectHideFlags: 0
@@ -2385,6 +2439,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 659565453}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &194171682 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1487093429361679291, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &194171687
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 194171682}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: finger_width
 --- !u!1 &196302642
 GameObject:
   m_ObjectHideFlags: 0
@@ -3670,6 +3742,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 347107460}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &281467362 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 329414114443917845, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &281467368
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 281467362}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_inner_knuckle_joint
 --- !u!1 &288297131
 GameObject:
   m_ObjectHideFlags: 0
@@ -3887,6 +3977,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1921040438}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &321186189 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 9187858823983491539, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &321186194
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 321186189}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: cable_connector_1_joint
 --- !u!1 &324439718
 GameObject:
   m_ObjectHideFlags: 0
@@ -4186,6 +4294,24 @@ Transform:
   - {fileID: 880076711}
   m_Father: {fileID: 1953112205}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &364100419 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7393556792556111800, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &364100424
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 364100419}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: tcp_joint
 --- !u!1 &368912277
 GameObject:
   m_ObjectHideFlags: 0
@@ -11834,6 +11960,24 @@ Transform:
   - {fileID: 1927469}
   m_Father: {fileID: 1137153017}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &953811796 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3886859979285936133, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &953811802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 953811796}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_inner_knuckle_joint
 --- !u!1 &957933343
 GameObject:
   m_ObjectHideFlags: 0
@@ -12121,6 +12265,24 @@ Transform:
   - {fileID: 1070547346}
   m_Father: {fileID: 2137583801}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &973960800 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5891404076687506653, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &973960805
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 973960800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_finger_tip_joint
 --- !u!1 &977047813
 GameObject:
   m_ObjectHideFlags: 0
@@ -13157,6 +13319,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1040810885}
   m_CullTransparentMesh: 1
+--- !u!1 &1041483296 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7086014531368584150, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1041483302
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1041483296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: base_link-base_link_inertia
 --- !u!1 &1043102415
 GameObject:
   m_ObjectHideFlags: 0
@@ -13912,6 +14092,24 @@ Transform:
   - {fileID: 1538388578}
   m_Father: {fileID: 973588772}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1072285279 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1535759918678331518, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1072285285
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1072285279}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: finger_joint
 --- !u!1 &1078065178
 GameObject:
   m_ObjectHideFlags: 0
@@ -14076,6 +14274,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1094881904}
   m_CullTransparentMesh: 1
+--- !u!1 &1094902332 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1769025581810810787, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1094902338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1094902332}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: wrist_2_joint
 --- !u!1 &1099520597
 GameObject:
   m_ObjectHideFlags: 0
@@ -14591,6 +14807,24 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!1 &1140939498 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1642939060285343687, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1140939503
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1140939498}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: base_link-base_fixed_joint
 --- !u!1 &1146842307
 GameObject:
   m_ObjectHideFlags: 0
@@ -15092,6 +15326,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 940278309}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1184949886 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7700260563711491835, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1184949891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1184949886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: flange-tool0
 --- !u!1 &1191258665
 GameObject:
   m_ObjectHideFlags: 0
@@ -15466,6 +15718,24 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 420, y: 550}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1224875894 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8447793534219103832, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1224875900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1224875894}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: wrist_3_joint
 --- !u!1 &1227102659
 GameObject:
   m_ObjectHideFlags: 0
@@ -17877,6 +18147,24 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 228}
   m_SizeDelta: {x: 270, y: 52}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1369672146 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6564186970354212716, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1369672151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1369672146}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: trolley_to_base_joint
 --- !u!1 &1372534964
 GameObject:
   m_ObjectHideFlags: 0
@@ -18761,6 +19049,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1442834634}
   m_CullTransparentMesh: 1
+--- !u!1 &1444643007 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6051097564755272281, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1444643013
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1444643007}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: wrist_1_joint
 --- !u!1 &1451001235
 GameObject:
   m_ObjectHideFlags: 0
@@ -18997,6 +19303,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 347107460}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1509020244 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7723031182342841636, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1509020249
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1509020244}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: cable_connector_0_joint
 --- !u!1 &1509608363
 GameObject:
   m_ObjectHideFlags: 0
@@ -19445,6 +19769,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 482542326778865234, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: -0.000000059604645
+      objectReference: {fileID: 0}
+    - target: {fileID: 1415692664201626337, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: -0.21320008
+      objectReference: {fileID: 0}
+    - target: {fileID: 1495780144424295253, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: 0.039592046
+      objectReference: {fileID: 0}
+    - target: {fileID: 1495780144424295253, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: 0.00000003569668
+      objectReference: {fileID: 0}
     - target: {fileID: 2358025859270613331, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -19485,14 +19825,154 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2908563242956831814, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: 0.0076780654
+      objectReference: {fileID: 0}
+    - target: {fileID: 4238355699046102843, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: 0.00000006511807
+      objectReference: {fileID: 0}
+    - target: {fileID: 4395950244341740752, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: 0.00000005960463
+      objectReference: {fileID: 0}
+    - target: {fileID: 4513018326800248517, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: -0.018999973
+      objectReference: {fileID: 0}
+    - target: {fileID: 4513018326800248517, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: 0.000000017970894
+      objectReference: {fileID: 0}
+    - target: {fileID: 4982851616184996841, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: -0.00000008940697
+      objectReference: {fileID: 0}
     - target: {fileID: 4984449883771525076, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
       propertyPath: m_Name
       value: UR3e Robot
       objectReference: {fileID: 0}
+    - target: {fileID: 5181516169639147501, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: 3.3632514e-14
+      objectReference: {fileID: 0}
+    - target: {fileID: 5181516169639147501, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: -0.000000059604616
+      objectReference: {fileID: 0}
+    - target: {fileID: 6221266700830757474, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.y
+      value: -0.0000000063906525
+      objectReference: {fileID: 0}
+    - target: {fileID: 6221266700830757474, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: -0.24354994
+      objectReference: {fileID: 0}
+    - target: {fileID: 6598850460931479007, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: 0.000000059604638
+      objectReference: {fileID: 0}
+    - target: {fileID: 6598850460931479007, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: 8.8817896e-14
+      objectReference: {fileID: 0}
+    - target: {fileID: 6847868357816150649, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: 0.017177971
+      objectReference: {fileID: 0}
+    - target: {fileID: 8683555377865213290, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: 3.5527137e-14
+      objectReference: {fileID: 0}
+    - target: {fileID: 8683555377865213290, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.z
+      value: -0.00000005960458
+      objectReference: {fileID: 0}
+    - target: {fileID: 8820331901147803873, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: 0.03500003
+      objectReference: {fileID: 0}
+    - target: {fileID: 9021712980459670655, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      propertyPath: m_ParentAnchorPosition.x
+      value: -0.01717803
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6564186970354212716, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1369672151}
+    - targetCorrespondingSourceObject: {fileID: 1642939060285343687, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1140939503}
+    - targetCorrespondingSourceObject: {fileID: 7086014531368584150, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1041483302}
+    - targetCorrespondingSourceObject: {fileID: 5089453438332446873, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1594685259}
+    - targetCorrespondingSourceObject: {fileID: 7700688361200651494, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 174117471}
+    - targetCorrespondingSourceObject: {fileID: 3891483995867563001, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1995833505}
+    - targetCorrespondingSourceObject: {fileID: 6051097564755272281, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1444643013}
+    - targetCorrespondingSourceObject: {fileID: 1769025581810810787, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1094902338}
+    - targetCorrespondingSourceObject: {fileID: 8447793534219103832, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1224875900}
+    - targetCorrespondingSourceObject: {fileID: 1638522476895733025, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1623570152}
+    - targetCorrespondingSourceObject: {fileID: 7700260563711491835, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1184949891}
+    - targetCorrespondingSourceObject: {fileID: 4363055084271335942, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2015189234}
+    - targetCorrespondingSourceObject: {fileID: 9187858823983491539, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 321186194}
+    - targetCorrespondingSourceObject: {fileID: 7723031182342841636, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1509020249}
+    - targetCorrespondingSourceObject: {fileID: 329414114443917845, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 281467368}
+    - targetCorrespondingSourceObject: {fileID: 2780117253100430097, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 190095512}
+    - targetCorrespondingSourceObject: {fileID: 8878372272065413484, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 129115696}
+    - targetCorrespondingSourceObject: {fileID: 7393556792556111800, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 364100424}
+    - targetCorrespondingSourceObject: {fileID: 3886859979285936133, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 953811802}
+    - targetCorrespondingSourceObject: {fileID: 1535759918678331518, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1072285285}
+    - targetCorrespondingSourceObject: {fileID: 3105287693020137186, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1895871390}
+    - targetCorrespondingSourceObject: {fileID: 5891404076687506653, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 973960805}
+    - targetCorrespondingSourceObject: {fileID: 1487093429361679291, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 194171687}
+    - targetCorrespondingSourceObject: {fileID: 4857176030636613332, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2118820380}
   m_SourcePrefab: {fileID: 100100000, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
 --- !u!114 &1566727489 stripped
 MonoBehaviour:
@@ -19819,6 +20299,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1602026541}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1594685253 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5089453438332446873, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1594685259
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1594685253}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: shoulder_pan_joint
 --- !u!1 &1595807275
 GameObject:
   m_ObjectHideFlags: 0
@@ -20412,6 +20910,24 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 128}
   m_SizeDelta: {x: 290, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1623570147 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1638522476895733025, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1623570152
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1623570147}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: wrist_3-flange
 --- !u!1 &1627515001
 GameObject:
   m_ObjectHideFlags: 0
@@ -24007,6 +24523,24 @@ SkinnedMeshRenderer:
     m_Center: {x: 0.009499997, y: 0.01770607, z: -0.0011095554}
     m_Extent: {x: 0.04527676, y: 0.05372102, z: 0.06648618}
   m_DirtyAABB: 0
+--- !u!1 &1895871384 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3105287693020137186, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1895871390
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1895871384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_inner_finger_joint
 --- !u!1 &1896738241
 GameObject:
   m_ObjectHideFlags: 0
@@ -25300,6 +25834,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 989451742}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1995833499 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3891483995867563001, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1995833505
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1995833499}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: elbow_joint
 --- !u!1 &2000110953
 GameObject:
   m_ObjectHideFlags: 0
@@ -25331,6 +25883,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1274819763}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2015189228 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4363055084271335942, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2015189234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2015189228}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: ur3e_onrobot_rg2_joint
 --- !u!1 &2016014421
 GameObject:
   m_ObjectHideFlags: 0
@@ -26754,6 +27324,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2114274646}
   m_CullTransparentMesh: 1
+--- !u!1 &2118820374 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4857176030636613332, guid: 5e41957997504bf458dbb54a5403d950, type: 3}
+  m_PrefabInstance: {fileID: 1566727488}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2118820380
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2118820374}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: mount_plate_to_trolley_joint
 --- !u!1 &2120596051
 GameObject:
   m_ObjectHideFlags: 0
