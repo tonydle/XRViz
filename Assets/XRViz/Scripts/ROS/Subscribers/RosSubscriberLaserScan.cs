@@ -8,7 +8,7 @@ namespace Unity.Robotics
     // Turns sensor_msgs/LaserScan polar ranges into Unity-space points in the sensor's own
     // frame, so a visualiser can just parent them under a GameObject and let its Transform
     // place the scan in the room.
-    public class RosSubscriberLaserScan : RosSubscriber<RosLaserScan>
+    public class RosSubscriberLaserScan : RosSubscriber<RosLaserScan>, IRosFrameSource
     {
         // Reused between messages - a scan arrives at 10-40 Hz and reallocating arrays that
         // often would churn the GC for no reason
@@ -20,6 +20,9 @@ namespace Unity.Robotics
         private float _rangeMax;
         private bool _ready;
         private TimeMsg _latestTime = new TimeMsg();
+
+        // The sensor frame these points are expressed in, for TfAnchor to place them by
+        private string _frameId = string.Empty;
 
         // Wall-clock arrival time of the last scan, so a visualiser can age the data out. The
         // header stamp can't do this job: it's the sensor's clock, which need not match Unity's.
@@ -34,6 +37,7 @@ namespace Unity.Robotics
             var msg = GetLatestMessage();
             _ready = false;
             _latestTime = msg.header.stamp;
+            _frameId = msg.header.frame_id;
             _rangeMin = msg.range_min;
             _rangeMax = msg.range_max;
 
@@ -79,6 +83,8 @@ namespace Unity.Robotics
         protected override void OnTopicChanged()
         {
             ClearData();
+            // A different topic is a different sensor, so the frame it reported no longer applies
+            _frameId = string.Empty;
         }
 
         // Drop everything parsed from the current topic. isReady() goes false until the next
@@ -138,5 +144,10 @@ namespace Unity.Robotics
         {
             return _latestTime;
         }
+
+        // header.frame_id of the last scan. Deliberately NOT cleared by ClearData: the frame is a
+        // property of the topic, not of the sweep, and a TF anchor should hold its place while the
+        // sensor is quiet rather than snapping back to the fixed frame.
+        public string FrameId => _frameId;
     }
 }

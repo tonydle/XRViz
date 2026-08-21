@@ -21,11 +21,14 @@ namespace Unity.Robotics
     // is needed for reconstruction maths, which is the only thing this is used for here. It does
     // mean the texture renders upside down if you put it straight on a quad; flip it there, not
     // in the upload, so the pixel coordinates keep agreeing with the camera intrinsics.
-    public class RosSubscriberImage : RosSubscriber<RosImage>
+    public class RosSubscriberImage : RosSubscriber<RosImage>, IRosFrameSource
     {
         private Texture2D _texture2D;
         private bool _ready;
         private float _lastMessageRealtime = -1f;
+
+        // Optical frame of the camera that produced this image, for TfAnchor to place a cloud by
+        private string _frameId = string.Empty;
 
         private string _encoding = string.Empty;
         private int _width;
@@ -120,6 +123,7 @@ namespace Unity.Robotics
             _texture2D.Apply(false, false);
 
             _encoding = msg.encoding;
+            _frameId = msg.header.frame_id;
             _width = width;
             _height = height;
             _depthMetersPerUnit = metersPerUnit;
@@ -183,6 +187,11 @@ namespace Unity.Robotics
             return _encoding;
         }
 
+        // header.frame_id of the last image - conventionally a *_optical_frame, which is
+        // right-down-forward rather than FLU (REP 103/145) and needs the correction TfAnchor
+        // applies. Held across ClearData for the same reason as the laser scan's.
+        public string FrameId => _frameId;
+
         public int GetImageWidth()
         {
             return _width;
@@ -223,6 +232,7 @@ namespace Unity.Robotics
             ClearData();
             // The new topic may be a different camera at a different resolution or encoding
             _unsupportedEncodingLogged = false;
+            _frameId = string.Empty;
         }
 
         protected void OnDestroy()

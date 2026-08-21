@@ -32,8 +32,8 @@ XRViz layer only adds the ROS side.
      ArticulationBody joints
    - an amber **Robot Placement Handle** sphere (with `PlacementHandle`), positioned at the
      trolley's top-front-left corner, already grab-enabled (see "Moving things around" below)
-   - a **Laser Scan** object (`RosSubscriberLaserScan` + `LaserScanVisualizer`, default
-     topic `/laser_scan`) with its own magenta **Laser Scan Placement Handle**
+   - a **Laser Scan** object (`RosSubscriberLaserScan` + `LaserScanVisualizer`, no default
+     topic — pick one from the Topics browser) with its own magenta **Laser Scan Placement Handle**
    - a **Point Cloud** object (`DepthImagePointCloud` + colour/depth `RosSubscriberImage` and a
      `RosSubscriberCameraInfo` on named children) with a green **Point Cloud Placement Handle**
      that *is* the cloud's origin — see "RGBD point cloud" below
@@ -85,6 +85,8 @@ keypad and topic browser are popups toggled from it.
 | **Topics** | shows/hides the topic browser (below) |
 | **Clear Data** | wipes every visualisation holding geometry — laser scan, point cloud, anything implementing `IClearableVisualization` |
 | **Reset Anchors** | puts every placement handle back where it started (see "Putting them back") |
+| **Anchor: TF** / **Anchor: Manual** | switches every visualisation between `/tf` placement and hand placement (see "Placing from TF"). The label says what pressing it *gets* you |
+| **TF Anchors** | shows/hides the per-visualisation TF panel |
 
 Below the status readout is the **anchor key**: a coloured dot per placement handle, generated
 from the same `k_HandleStyles` table as the handles themselves.
@@ -211,17 +213,18 @@ and the depth camera's `CameraInfo`. Reconstruction runs on the GPU
 (`Shaders/DepthImagePointCloudGPU.compute`), and the result is drawn as camera-facing squares
 with `Shaders/PointCloudBillboard.shader`.
 
-Generated topics — the conventional names a simulator publishes:
+Generated child objects — none start subscribed to anything:
 
-| Child object | Topic | Type |
-| --- | --- | --- |
-| `Color Image` | `/camera/color/image_raw` | `sensor_msgs/Image` |
-| `Depth Image` | `/camera/depth/image_raw` | `sensor_msgs/Image` |
-| `Depth Camera Info` | `/camera/depth/camera_info` | `sensor_msgs/CameraInfo` |
+| Child object | Type |
+| --- | --- |
+| `Color Image` | `sensor_msgs/Image` |
+| `Depth Image` | `sensor_msgs/Image` |
+| `Depth Camera Info` | `sensor_msgs/CameraInfo` |
 
-All three are retargetable from the Topics browser — they appear in its ◀ ▶ list by GameObject
-name, which is why the two `sensor_msgs/Image` subscribers live on named children rather than
-stacked on the cloud root.
+All three are targeted from the Topics browser, which only ever lists topics the endpoint is
+actually advertising — they appear in its ◀ ▶ list by GameObject name, which is why the two
+`sensor_msgs/Image` subscribers live on named children rather than stacked on the cloud root.
+The point cloud has nothing to draw until all three are picked.
 
 #### The GameObject is the origin
 
@@ -323,7 +326,7 @@ moved with `TeleportRoot`. `_yawOnly` keeps the target upright; turn it off to a
 
 ### Which handle is which
 
-Three ~4 cm spheres, colour-coded, with a matching key on the status panel:
+Five spheres, ~3–5 cm, colour-coded, with a matching key on the status panel:
 
 | Handle | Colour | Moves |
 | --- | --- | --- |
@@ -331,6 +334,7 @@ Three ~4 cm spheres, colour-coded, with a matching key on the status panel:
 | Panel Placement Handle | cyan | the whole ROS Control Panel group |
 | Laser Scan Placement Handle | magenta | the laser scan visualisation |
 | Point Cloud Placement Handle | green | the RGBD cloud's **origin** — see "RGBD point cloud" |
+| TF Origin Placement Handle | white, a size up | the **fixed frame** — the origin of the whole TF world |
 
 Spheres rather than cubes because a cube's silhouette changes with viewing angle — at this size
 it reads as a different object depending on where you stand. Amber/cyan/magenta rather than
@@ -379,6 +383,73 @@ Two things to know:
 
 `ControlPanelActions` finds its targets with `FindObjectsByType` at press time rather than
 holding a serialized list, so a handle you add to the scene by hand is picked up as well.
+
+## Placing from TF
+
+Hand placement answers "where in this room do I want to see this?". TF placement answers "where
+is this, according to the robot?". Both are useful at different points of bringing a rig up, so
+each visualisation can be switched between them at runtime — **Anchor: TF** on the status panel
+does all of them, the **TF Anchors** panel does one row at a time.
+
+### The one thing you align
+
+While TF anchoring is on, every anchored visualisation is placed from `/tf`, so their positions
+relative to *each other* come from the robot and are no longer yours to set. Their handles hide,
+because TF owns those poses now and a grabbable that does nothing reads as a broken app.
+
+What stays is the **white TF origin handle**: `RosTfTree`'s own Transform is the fixed frame, and
+every TF pose is measured out from it. Park it on the real robot's base and the laser lands at the
+laser's frame, the cloud at the camera's, the model on the real arm. It is the single alignment
+that places everything else — which is the entire point of the mode.
+
+The frame itself is drawn as a 15 cm **axis triad** (red/green/blue = ROS x/y/z, RViz's colours,
+along the ROS axes rather than Unity's) because that is the thing you are actually aligning — the
+handle is a grip and sits a metre above it, on the opposite trolley corner from the robot's amber
+one. Line the triad up with the real base, not the sphere.
+
+Switch back to **Anchor: Manual** and each handle reappears where TF left its object
+(`PlacementHandle.SnapToTarget`), so nothing jumps and you carry on from there.
+
+### Where the frames come from
+
+Each anchor takes its frame from its topic's own `header.frame_id`, via `IRosFrameSource` on the
+subscriber — so retargeting a topic in the browser retargets its anchor too, with nothing to
+retype (there is no keyboard in the headset). The exception is the robot: no message carries a
+robot's root frame name, so `TfAnchor._frameId` is typed in the Inspector, defaulting to
+`base_link`.
+
+The **TF Anchors** panel shows each anchor's frame and what it is doing:
+
+| Row says | Means |
+| --- | --- |
+| `TF` | placed from `/tf` this frame |
+| `manual` | its handle owns the pose |
+| `no msg` | nothing has arrived on that topic yet, so its frame is unknown |
+| `not in /tf` | the frame is known but the TF tree has never heard of it |
+| `no TF origin` | there is no `RosTfTree` in the scene |
+
+A frame that cannot be resolved leaves the object **where it is**. That is deliberate: placing it
+at the origin instead would look exactly like a measurement, and a cloud confidently in the wrong
+place is worse than one you can see hasn't moved.
+
+### Gotchas
+
+- **`/tf_static` is latched, and we subscribe late.** `ros_tcp_endpoint` only subscribes when this
+  scene connects, so static transforms published before that are simply missed and their frames
+  never appear. If a static link is stuck on `not in /tf`, restart (or republish from) the node
+  that owns it *after* connecting.
+- **Both TF topics share one table.** The package's own `TFSystem` keeps a separate table per
+  topic, so a chain crossing `/tf` and `/tf_static` — a fixed sensor mount under a moving arm,
+  i.e. the normal case — cannot be resolved at all. `RosTfTree` exists for that reason; don't
+  swap it back.
+- **Frames from different trees are refused.** If the fixed frame and the data's frame have no
+  common root, there is no known relationship between them and the anchor reports failure rather
+  than composing them anyway.
+- **Optical frames get a rotation, not a flip.** `*_optical_frame` is right-down-forward while TF
+  transforms are converted as FLU, and the two differ by an axis permutation. `TfAnchor` applies
+  `k_OpticalCorrection` (−120° about `(1,1,1)`) automatically on any frame with that suffix. If a
+  cloud comes out on its side, check that first: a forward-looking camera must resolve to
+  *identity* rotation relative to its parent link.
 
 ## 3. Point Unity at your ROS machine
 

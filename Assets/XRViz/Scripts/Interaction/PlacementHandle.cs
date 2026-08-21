@@ -33,6 +33,17 @@ namespace Unity.Robotics
         private Vector3 _lastPosition;
         private Quaternion _lastRotation;
 
+        // Set while something else owns the target's pose - today that's TfAnchor, which places
+        // the target from the TF tree instead. The handle stops writing (and is normally hidden
+        // with it) so the two don't fight over the same Transform every frame.
+        private bool _suspended;
+
+        // What this handle actually moves, whichever of the two target fields is set
+        public Transform Target =>
+            _targetArticulationBody != null ? _targetArticulationBody.transform : _target;
+
+        public bool Suspended => _suspended;
+
         private void Awake()
         {
             _defaultPosition = transform.position;
@@ -43,7 +54,7 @@ namespace Unity.Robotics
 
         private void LateUpdate()
         {
-            if (_target == null && _targetArticulationBody == null)
+            if (_suspended || (_target == null && _targetArticulationBody == null))
                 return;
 
             // Only write when the handle actually moved, so nothing fights us for control of
@@ -69,7 +80,61 @@ namespace Unity.Robotics
             // line with the handle - so push it through explicitly instead
             _lastPosition = _defaultPosition;
             _lastRotation = _defaultRotation;
-            ApplyToTarget();
+
+            // A suspended handle's target belongs to TF; move the handle home anyway (so it is
+            // where you left it when manual placement resumes) but don't drag the target with it
+            if (!_suspended)
+                ApplyToTarget();
+        }
+
+        // Hand the target over to something else, or take it back. Hiding is the default because
+        // a grabbable sphere that visibly does nothing when you pull it reads as a broken app;
+        // deactivating also unregisters its Interaction SDK interactables for free.
+        public void SetSuspended(bool suspended, bool hide = true)
+        {
+            if (_suspended == suspended)
+                return;
+
+            _suspended = suspended;
+
+            if (!suspended)
+            {
+                // Re-home onto wherever the target ended up before re-enabling, or the first
+                // LateUpdate would see a stale handle pose and yank the target back to it
+                SnapToTarget();
+            }
+
+            if (hide)
+                gameObject.SetActive(!suspended);
+        }
+
+        // Place the target directly, ignoring the handle's own pose and offset. For a driver that
+        // knows the pose it wants (TfAnchor) rather than one moving a grip about.
+        public void SetTargetPose(Vector3 position, Quaternion rotation)
+        {
+            if (_targetArticulationBody != null)
+                _targetArticulationBody.TeleportRoot(position, rotation);
+            else if (_target != null)
+                _target.SetPositionAndRotation(position, rotation);
+        }
+
+        // Move the handle to where it would have to be for ApplyToTarget() to reproduce the
+        // target's current pose - the inverse of ApplyToTarget, so control changes hands without
+        // anything visibly jumping.
+        public void SnapToTarget()
+        {
+            Transform target = Target;
+            if (target == null)
+                return;
+
+            Quaternion rotation = target.rotation;
+            Quaternion applied = _yawOnly
+                ? Quaternion.Euler(0f, rotation.eulerAngles.y, 0f)
+                : rotation;
+
+            transform.SetPositionAndRotation(target.position - applied * _offset, rotation);
+            _lastPosition = transform.position;
+            _lastRotation = transform.rotation;
         }
 
         private void ApplyToTarget()

@@ -28,6 +28,7 @@ public static class XRVizCreateMVPScene
         "ROS Control Panel", "Panel Placement Handle",
         "Laser Scan", "Laser Scan Placement Handle",
         "Point Cloud", "Point Cloud Placement Handle",
+        "TF Origin", "TF Origin Placement Handle",
         "ROS Status Panel", // legacy: was a root object before the panel group was introduced
     };
     const string k_PointCloudComputePath = "Assets/XRViz/Shaders/DepthImagePointCloudGPU.compute";
@@ -78,9 +79,19 @@ public static class XRVizCreateMVPScene
         Label = "Point cloud origin",
         Color = new Color(0.35f, 0.90f, 0.45f), // green
     };
+    // White and a size up from the rest, because this one isn't a peer of the others: it is the
+    // origin of the TF world, and while TF anchoring is on it is the only handle still visible -
+    // every anchored visualisation is measured out from it, so moving it moves all of them.
+    static readonly HandleStyle k_TfOriginHandleStyle = new HandleStyle
+    {
+        ObjectName = "TF Origin Placement Handle",
+        Label = "TF origin (fixed frame)",
+        Color = new Color(0.96f, 0.96f, 0.98f), // white
+    };
     static readonly HandleStyle[] k_HandleStyles =
     {
         k_RobotHandleStyle, k_PanelHandleStyle, k_ScanHandleStyle, k_PointCloudHandleStyle,
+        k_TfOriginHandleStyle,
     };
 
     const string k_MaterialFolder = "Assets/XRViz/Materials";
@@ -102,9 +113,9 @@ public static class XRVizCreateMVPScene
     static readonly Color k_ButtonNegative = new Color(0.44f, 0.16f, 0.16f);
 
     const float k_HeaderHeight = 54f;
-    // Tall enough for the status block, a key row per handle, three button rows and the
+    // Tall enough for the status block, a key row per handle, five button rows and the
     // feedback line - see the layout constants in Run(), which are all measured from the centre
-    static readonly Vector2 k_StatusPanelSize = new Vector2(420f, 550f);
+    static readonly Vector2 k_StatusPanelSize = new Vector2(420f, 752f);
     static readonly Vector2 k_ButtonSize = new Vector2(190f, 50f);
 
     [MenuItem("XRViz/Create MR MVP Scene (UR3e)")]
@@ -165,8 +176,32 @@ public static class XRVizCreateMVPScene
         // so the handle sits beside the corner rather than clipping into it. Make it
         // grabbable with the Interaction SDK (see Docs/MVP_QUEST3_SETUP.md) and the robot follows
         var trolleyCornerOffset = new Vector3(-0.395f, 1.125f, -0.405f);
-        CreatePlacementHandle(k_RobotHandleStyle, k_RobotBasePosition + trolleyCornerOffset,
+        var robotHandle = CreatePlacementHandle(k_RobotHandleStyle, k_RobotBasePosition + trolleyCornerOffset,
             0.04f, target: null, articulationBody: robotRoot, offset: -trolleyCornerOffset);
+
+        // The TF world's origin: what every TF-anchored visualisation is measured out from, and
+        // therefore the one thing that has to line up with the real room for all of them to land
+        // correctly. Starts on the robot's base, since that is where the fixed frame of an arm rig
+        // physically is - align it with the real robot's base and the rest follows from /tf.
+        //
+        // Its handle sits on the opposite top corner of the trolley from the robot's, so the two
+        // are never confused for each other by position alone (they differ by colour and size too).
+        var tfOriginGo = new GameObject("TF Origin");
+        tfOriginGo.transform.SetPositionAndRotation(k_RobotBasePosition, Quaternion.identity);
+        tfOriginGo.AddComponent<RosTfTree>();
+        CreateAxisTriad(tfOriginGo.transform, length: 0.15f, thickness: 0.008f);
+
+        var tfHandleOffset = new Vector3(0.395f, 1.125f, 0.405f);
+        CreatePlacementHandle(k_TfOriginHandleStyle, k_RobotBasePosition + tfHandleOffset,
+            0.05f, target: tfOriginGo.transform, articulationBody: null, offset: -tfHandleOffset);
+
+        // The robot's own base link is a TF frame like any other, so the robot can be placed from
+        // /tf too - which is what makes a mobile base (odom -> base_link) move in the room rather
+        // than staying wherever it was dropped. No frame source: no message carries the robot's
+        // root frame name, so it is named here. Retype it in the Inspector for a robot whose root
+        // link isn't the conventional base_link.
+        AddTfAnchor(robot, robotHandle, frameSource: null, frameId: "base_link", label: "Robot");
+        AddVisibilityTarget(robot, "Robot");
 
         // Laser scan visualisation. The scan mesh is built in the sensor's own frame under this
         // object's Transform, so its handle moves it like anything else - point the topic browser
@@ -176,40 +211,49 @@ public static class XRVizCreateMVPScene
         scanGo.transform.position = scanPosition;
         var scanSub = scanGo.AddComponent<RosSubscriberLaserScan>();
         var scanSubSo = new SerializedObject(scanSub);
-        // The rig publishes /laser_scan rather than the conventional /scan. Retarget from the
-        // panel's topic browser at runtime if that changes.
-        scanSubSo.FindProperty("_topic").stringValue = "/laser_scan";
+        // No default topic - Subscribe() no-ops on an empty string, so this stays unsubscribed
+        // until a topic is picked from the panel's Topics browser, which only ever lists what
+        // the endpoint actually advertises.
+        scanSubSo.FindProperty("_topic").stringValue = "";
         scanSubSo.ApplyModifiedPropertiesWithoutUndo();
         var scanVis = scanGo.AddComponent<LaserScanVisualizer>();
         var scanVisSo = new SerializedObject(scanVis);
         scanVisSo.FindProperty("_scanSub").objectReferenceValue = scanSub;
         scanVisSo.ApplyModifiedPropertiesWithoutUndo();
 
-        CreatePlacementHandle(k_ScanHandleStyle, scanPosition + new Vector3(0f, -0.15f, 0f),
+        var scanHandle = CreatePlacementHandle(k_ScanHandleStyle, scanPosition + new Vector3(0f, -0.15f, 0f),
             0.03f, target: scanGo.transform, articulationBody: null, offset: new Vector3(0f, 0.15f, 0f));
+
+        // Frame comes from the scan's own header, so retargeting the topic from the headset
+        // retargets the anchor with it - there is no keyboard in there to retype a frame name
+        AddTfAnchor(scanGo, scanHandle, scanSub, frameId: string.Empty, label: "Laser scan");
+        AddVisibilityTarget(scanGo, "Laser Scan");
 
         // RGBD point cloud. Its Transform IS the cloud's origin - the camera's optical centre
         // sits on this object and the cloud projects out along its +Z - so placing the handle
         // where the real camera stands in the room lands the virtual geometry on the real
         // geometry. Aimed back at the robot to start with, which is the usual thing to look at.
-        var cloudPosition = new Vector3(-1.2f, 1.5f, 2.2f);
-        var cloudRotation = Quaternion.LookRotation(
-            (k_RobotBasePosition + new Vector3(0f, 1.1f, 0f)) - cloudPosition, Vector3.up);
+        var cloudPosition = new Vector3(0.2f, 1.2f, 0.50f);
+        // Yaw only, pitch and roll zeroed - the cloud's floor has to stay parallel to the room's,
+        // so aiming is levelled off toward the robot rather than looking down/up at it.
+        var cloudLookDir = (k_RobotBasePosition + new Vector3(0f, 1.1f, 0f)) - cloudPosition;
+        cloudLookDir.y = 0f;
+        var cloudRotation = Quaternion.LookRotation(cloudLookDir, Vector3.up);
         var cloudGo = new GameObject("Point Cloud");
         cloudGo.transform.SetPositionAndRotation(cloudPosition, cloudRotation);
 
         // Raw sensor_msgs/Image on child objects rather than three components stacked on the
         // cloud root: two of them are the same type, and in the Inspector (and in the topic
         // browser's target list) "Color Image" and "Depth Image" are the only thing that tells
-        // them apart at a glance. Topic defaults are the conventional RGBD names a sim publishes.
-        var colorSub = CreateImageSubscriber(cloudGo.transform, "Color Image", "/camera/color/image_raw");
-        var depthSub = CreateImageSubscriber(cloudGo.transform, "Depth Image", "/camera/depth/image_raw");
+        // them apart at a glance. No default topic - see the note on the laser scan above.
+        var colorSub = CreateImageSubscriber(cloudGo.transform, "Color Image", "");
+        var depthSub = CreateImageSubscriber(cloudGo.transform, "Depth Image", "");
 
         var infoGo = new GameObject("Depth Camera Info");
         infoGo.transform.SetParent(cloudGo.transform, false);
         var depthInfoSub = infoGo.AddComponent<RosSubscriberCameraInfo>();
         var infoSo = new SerializedObject(depthInfoSub);
-        infoSo.FindProperty("_topic").stringValue = "/camera/depth/camera_info";
+        infoSo.FindProperty("_topic").stringValue = "";
         infoSo.ApplyModifiedPropertiesWithoutUndo();
 
         var cloud = cloudGo.AddComponent<DepthImagePointCloud>();
@@ -224,15 +268,22 @@ public static class XRVizCreateMVPScene
         cloudSo.FindProperty("_computeShader").objectReferenceValue = compute;
         cloudSo.ApplyModifiedPropertiesWithoutUndo();
 
-        // yawOnly is off here, unlike every other handle: a camera has to be *aimed*, and
-        // flattening its rotation to yaw would throw away the pitch. The handle therefore starts
-        // at the cloud's own rotation, and the offset is expressed in that rotated space so the
-        // handle keeps sitting just below the origin as the cloud is turned.
+        // yawOnly (the default) keeps the cloud's floor level - only the handle's Y rotation
+        // reaches the target, X and Z are always flattened to 0. The handle still starts at the
+        // cloud's own (now yaw-only) rotation so the offset stays expressed in that rotated space
+        // and the handle keeps sitting just below the origin as the cloud is turned.
         var cloudHandleOffset = new Vector3(0f, -0.14f, 0f);
-        CreatePlacementHandle(k_PointCloudHandleStyle, cloudPosition + cloudHandleOffset, 0.035f,
+        var cloudHandle = CreatePlacementHandle(k_PointCloudHandleStyle, cloudPosition + cloudHandleOffset, 0.035f,
             target: cloudGo.transform, articulationBody: null,
             offset: Quaternion.Inverse(cloudRotation) * -cloudHandleOffset,
-            yawOnly: false, rotation: cloudRotation);
+            rotation: cloudRotation);
+
+        // Anchored on the DEPTH image's frame, because depth is what gets back-projected - a
+        // registered pair usually shares one optical frame, but where they differ it is the depth
+        // one the geometry is actually in. That frame is right-down-forward rather than FLU, which
+        // TfAnchor corrects for automatically on any *_optical_frame.
+        AddTfAnchor(cloudGo, cloudHandle, depthSub, frameId: string.Empty, label: "Point cloud");
+        AddVisibilityTarget(cloudGo, "Point Cloud");
 
         // World-space ROS control panel: the status panel and the IP keypad are sibling
         // Canvases under a plain Transform, NOT one Canvas nested inside the other.
@@ -258,11 +309,11 @@ public static class XRVizCreateMVPScene
         // Everything below the header is laid out from the canvas centre, so the numbers here
         // read directly as "this far above/below the middle of the panel"
         var text = CreateLabel(canvasGo.transform, "Status Text", "ROS status…",
-            new Vector2(0f, 152f), new Vector2(384f, 110f), 22f, TextAlignmentOptions.TopLeft);
+            new Vector2(0f, 200f), new Vector2(384f, 110f), 22f, TextAlignmentOptions.TopLeft);
 
-        CreateDivider(canvasGo.transform, 86f, 384f);
-        CreateAnchorKey(canvasGo.transform, headingY: 72f, firstRowY: 44f, rowStep: 26f);
-        CreateDivider(canvasGo.transform, -52f, 384f);
+        CreateDivider(canvasGo.transform, 134f, 384f);
+        CreateAnchorKey(canvasGo.transform, headingY: 120f, firstRowY: 92f, rowStep: 26f);
+        CreateDivider(canvasGo.transform, -40f, 384f);
 
         var jointStateSub = robot.GetComponentInChildren<RosSubscriberJointState>();
 
@@ -274,22 +325,34 @@ public static class XRVizCreateMVPScene
 
         var actions = panelRootGo.AddComponent<ControlPanelActions>();
 
-        var connectButton = CreateButton(canvasGo.transform, "Connect", new Vector2(-105f, -76f), k_ButtonSize, 20f, true, k_ButtonPositive);
+        var connectButton = CreateButton(canvasGo.transform, "Connect", new Vector2(-105f, -74f), k_ButtonSize, 20f, true, k_ButtonPositive);
         UnityEventTools.AddVoidPersistentListener(connectButton.onClick, statusUi.Connect);
-        var disconnectButton = CreateButton(canvasGo.transform, "Disconnect", new Vector2(105f, -76f), k_ButtonSize, 20f, true, k_ButtonNegative);
+        var disconnectButton = CreateButton(canvasGo.transform, "Disconnect", new Vector2(105f, -74f), k_ButtonSize, 20f, true, k_ButtonNegative);
         UnityEventTools.AddVoidPersistentListener(disconnectButton.onClick, statusUi.Disconnect);
-        var editIpButton = CreateButton(canvasGo.transform, "Edit IP", new Vector2(-105f, -132f), k_ButtonSize, 20f, true, k_ButtonAccent);
-        var topicsButton = CreateButton(canvasGo.transform, "Topics", new Vector2(105f, -132f), k_ButtonSize, 20f, true, k_ButtonAccent);
-        var clearDataButton = CreateButton(canvasGo.transform, "Clear Data", new Vector2(-105f, -188f), k_ButtonSize, 20f, true, k_ButtonNeutral);
+        var editIpButton = CreateButton(canvasGo.transform, "Edit IP", new Vector2(-105f, -130f), k_ButtonSize, 20f, true, k_ButtonAccent);
+        var topicsButton = CreateButton(canvasGo.transform, "Topics", new Vector2(105f, -130f), k_ButtonSize, 20f, true, k_ButtonAccent);
+        var clearDataButton = CreateButton(canvasGo.transform, "Clear Data", new Vector2(-105f, -186f), k_ButtonSize, 20f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(clearDataButton.onClick, actions.ClearVisualizations);
-        var resetAnchorsButton = CreateButton(canvasGo.transform, "Reset Anchors", new Vector2(105f, -188f), k_ButtonSize, 20f, true, k_ButtonNeutral);
+        var resetAnchorsButton = CreateButton(canvasGo.transform, "Reset Anchors", new Vector2(105f, -186f), k_ButtonSize, 20f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(resetAnchorsButton.onClick, actions.ResetAnchors);
 
+        // Says what pressing it gets you, not what mode you're in - ControlPanelActions rewrites
+        // this label, including when the TF Anchors panel changes anchors behind its back
+        var tfToggleButton = CreateButton(canvasGo.transform, "Anchor: TF", new Vector2(-105f, -242f), k_ButtonSize, 20f, true, k_ButtonAccent);
+        UnityEventTools.AddVoidPersistentListener(tfToggleButton.onClick, actions.ToggleTfAnchoring);
+        var tfPanelButton = CreateButton(canvasGo.transform, "TF Anchors", new Vector2(105f, -242f), k_ButtonSize, 20f, true, k_ButtonNeutral);
+
+        // Opens the per-visualisation show/hide list - single centered button, since there's
+        // only one action here (the panel itself carries Show All / Hide All)
+        var visibilityPanelButton = CreateButton(canvasGo.transform, "Visibility", new Vector2(0f, -298f), new Vector2(200f, 50f), 20f, true, k_ButtonAccent);
+
         var feedback = CreateLabel(canvasGo.transform, "Action Feedback", "",
-            new Vector2(0f, -236f), new Vector2(384f, 26f), 17f);
+            new Vector2(0f, -342f), new Vector2(384f, 26f), 17f);
         feedback.color = k_TextMuted;
         var actionsSo = new SerializedObject(actions);
         actionsSo.FindProperty("_feedback").objectReferenceValue = feedback;
+        actionsSo.FindProperty("_tfButtonLabel").objectReferenceValue =
+            tfToggleButton.GetComponentInChildren<TextMeshProUGUI>();
         actionsSo.ApplyModifiedPropertiesWithoutUndo();
 
         var keypadUi = CreateIpKeypad(panelRootGo.transform, statusUi);
@@ -299,9 +362,17 @@ public static class XRVizCreateMVPScene
             new MonoBehaviour[] { jointStateSub, scanSub, colorSub, depthSub, depthInfoSub });
         UnityEventTools.AddVoidPersistentListener(topicsButton.onClick, topicBrowserUi.ToggleVisibility);
 
+        var tfAnchorPanelUi = CreateTfAnchorPanel(panelRootGo.transform);
+        UnityEventTools.AddVoidPersistentListener(tfPanelButton.onClick, tfAnchorPanelUi.ToggleVisibility);
+
+        var visibilityPanelUi = CreateVisibilityPanel(panelRootGo.transform);
+        UnityEventTools.AddVoidPersistentListener(visibilityPanelButton.onClick, visibilityPanelUi.ToggleVisibility);
+
         AddRayInteractionToCanvas(canvas);
         AddRayInteractionToCanvas(keypadUi.GetComponent<Canvas>());
         AddRayInteractionToCanvas(topicBrowserUi.GetComponent<Canvas>());
+        AddRayInteractionToCanvas(tfAnchorPanelUi.GetComponent<Canvas>());
+        AddRayInteractionToCanvas(visibilityPanelUi.GetComponent<Canvas>());
 
         // Panel starts hidden; left controller Menu button (OVRInput.Button.Start on LTouch)
         // toggles it, so it doesn't just float in view permanently. Lives on the group root
@@ -309,9 +380,9 @@ public static class XRVizCreateMVPScene
         panelRootGo.AddComponent<ControlPanelMenuToggle>();
 
         // Grab handle below the panel; the panel follows, same as the robot handle. The offset
-        // clears the panel's own half-height (550 units x 0.001 = 55 cm tall) plus a small gap.
-        CreatePlacementHandle(k_PanelHandleStyle, panelPosition + new Vector3(0f, -0.30f, 0f),
-            0.04f, target: panelRootGo.transform, articulationBody: null, offset: new Vector3(0f, 0.30f, 0f));
+        // clears the panel's own half-height (752 units x 0.001 = 75.2 cm tall) plus a small gap.
+        CreatePlacementHandle(k_PanelHandleStyle, panelPosition + new Vector3(0f, -0.436f, 0f),
+            0.04f, target: panelRootGo.transform, articulationBody: null, offset: new Vector3(0f, 0.436f, 0f));
 
         EditorSceneManager.SaveScene(scene, k_ScenePath);
         AddToBuildSettings(k_ScenePath);
@@ -321,16 +392,29 @@ public static class XRVizCreateMVPScene
             "objects it generates (robot, handles, ROS panel, laser scan) - Camera Rig, Passthrough, " +
             "and any other Building Blocks you've added are left alone and don't need to be re-added.\n\n" +
             "Every placement handle is a small coloured sphere - amber for the robot, cyan for the " +
-            "control panel, magenta for the laser scan, green for the point cloud origin, with a key " +
-            "on the panel itself. Each is movable out of the box: near grab (reach out and grab it) " +
-            "AND ray grab (point at it from a distance and hold the trigger); whatever it's pointed " +
-            "at follows either way.\n\n" +
+            "control panel, magenta for the laser scan, green for the point cloud origin, white (and " +
+            "a size up) for the TF origin, with a key on the panel itself. Each is movable out of the " +
+            "box: near grab (reach out and grab it) AND ray grab (point at it from a distance and hold " +
+            "the trigger); whatever it's pointed at follows either way.\n\n" +
+
+            "TF ANCHORING. Press 'Anchor: TF' on the panel and the robot, laser scan and point cloud " +
+            "stop being placed by hand and are placed from /tf instead - each at its own frame, all " +
+            "consistent with each other. Their handles hide while that's on, because TF owns the pose; " +
+            "the WHITE TF origin handle stays, and it is now the only thing to align: put its small " +
+            "red/green/blue axis triad (ROS x/y/z) on the real robot's base and everything else lands " +
+            "where /tf says it is. Press again for hand " +
+            "placement, and each handle comes back where TF left its object. 'TF Anchors' opens a " +
+            "panel showing each visualisation's frame and whether it resolved, one row per press to " +
+            "flip just that one. Frames come from each topic's own header, so retargeting a topic " +
+            "retargets its anchor - except the robot's, which is typed on its TfAnchor component " +
+            "(default base_link).\n\n" +
             "THE POINT CLOUD'S HANDLE IS ITS ORIGIN. The camera's optical centre sits on that green " +
             "sphere and the cloud projects out along its +Z, so park the handle where the real " +
             "camera stands in the room and the virtual geometry lands on the real geometry. It is " +
             "the one handle that takes full rotation rather than yaw only, because a camera has to " +
-            "be aimed. Topics default to /camera/color/image_raw, /camera/depth/image_raw and " +
-            "/camera/depth/camera_info - retarget them from the Topics browser.\n\n" +
+            "be aimed. None of the laser scan or point cloud subscribers start with a default " +
+            "topic - pick color, depth and depth camera_info from the Topics browser before " +
+            "either visualisation has anything to draw.\n\n" +
             "The panel's buttons are ray-enabled (point + trigger, like a normal menu):\n" +
             "  Connect / Disconnect - the ROS TCP connection\n" +
             "  Edit IP - shows a numeric keypad (no native VR keyboard is installed) to retype the " +
@@ -342,7 +426,13 @@ public static class XRVizCreateMVPScene
             "They also clear themselves after 3 s without a message, so a dropped sensor doesn't " +
             "leave a stale frame hanging in the room looking live\n" +
             "  Reset Anchors - puts every placement handle, and what it carries, back where this " +
-            "generator put it (including the panel itself)\n\n" +
+            "generator put it (including the panel itself)\n" +
+            "  Anchor: TF / Anchor: Manual - switches every visualisation between /tf placement and " +
+            "hand placement (the label says what pressing it gets you)\n" +
+            "  TF Anchors - per-visualisation TF/manual, with the frame each one is using\n" +
+            "  Visibility - show/hide the robot, laser scan and point cloud individually, or all " +
+            "at once; a hidden visualisation's subscriber and anchor pause with it and pick back " +
+            "up once shown again\n\n" +
             "The panel starts hidden and toggles with the left controller's Menu button.\n\n" +
             "These only work once the interactor rig exists, via Meta Building Blocks " +
             "(Meta > Tools > Building Blocks) — add each ONCE per project, not per scene:\n" +
@@ -589,6 +679,35 @@ public static class XRVizCreateMVPScene
         return handle;
     }
 
+    // Makes a visualisation placeable from /tf as an alternative to its grab handle. The anchor
+    // goes on the visualisation and drives the handle's target through the handle itself, so the
+    // ArticulationBody case (a robot root, which ignores Transform writes) stays in one place.
+    // Starts switched off - the scene behaves exactly as before until the panel says otherwise.
+    static void AddTfAnchor(GameObject target, GameObject handle, MonoBehaviour frameSource,
+        string frameId, string label)
+    {
+        var anchor = target.AddComponent<TfAnchor>();
+        var so = new SerializedObject(anchor);
+        so.FindProperty("_handle").objectReferenceValue = handle.GetComponent<PlacementHandle>();
+        so.FindProperty("_frameSource").objectReferenceValue = frameSource;
+        so.FindProperty("_frameId").stringValue = frameId;
+        so.FindProperty("_label").stringValue = label;
+        so.FindProperty("_anchorToTf").boolValue = false;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // Makes a top-level visualisation (or the robot) show/hide-able from the Visibility panel.
+    // Target and marker live on the same GameObject, so hiding it also pauses whatever's
+    // subscribing and anchoring on it - it just stops running like any other disabled object.
+    static void AddVisibilityTarget(GameObject target, string label)
+    {
+        var visibility = target.AddComponent<VisibilityTarget>();
+        var so = new SerializedObject(visibility);
+        so.FindProperty("_label").stringValue = label;
+        so.FindProperty("_target").objectReferenceValue = target;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
     static RosSubscriberImage CreateImageSubscriber(Transform parent, string name, string topic)
     {
         var go = new GameObject(name);
@@ -606,6 +725,11 @@ public static class XRVizCreateMVPScene
     // out untinted (or pink) in the APK.
     static Material GetHandleMaterial(HandleStyle style)
     {
+        return GetGeneratedMaterial(style.ObjectName.Replace(" ", string.Empty), style.Color);
+    }
+
+    static Material GetGeneratedMaterial(string assetName, Color color)
+    {
         var shader = Shader.Find(k_HandleShaderName);
         if (shader == null)
         {
@@ -617,7 +741,7 @@ public static class XRVizCreateMVPScene
         if (!AssetDatabase.IsValidFolder(k_MaterialFolder))
             AssetDatabase.CreateFolder("Assets/XRViz", "Materials");
 
-        string path = $"{k_MaterialFolder}/{style.ObjectName.Replace(" ", string.Empty)}.mat";
+        string path = $"{k_MaterialFolder}/{assetName}.mat";
         var material = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (material == null)
         {
@@ -626,13 +750,50 @@ public static class XRVizCreateMVPScene
         }
 
         material.shader = shader;
-        material.SetColor("_Color", style.Color);
+        material.SetColor("_Color", color);
         // A near-white rim rather than the handle's own colour, so the silhouette stays crisp
         // against a busy passthrough background without washing the hue out
-        material.SetColor("_RimColor", Color.Lerp(style.Color, Color.white, 0.75f));
+        material.SetColor("_RimColor", Color.Lerp(color, Color.white, 0.75f));
         EditorUtility.SetDirty(material);
         AssetDatabase.SaveAssetIfDirty(material);
         return material;
+    }
+
+    // A visible marker for the fixed frame, because the TF origin is otherwise an empty
+    // GameObject and its grab handle sits a metre above it - "align the origin with the real
+    // robot's base" is not an instruction you can follow while looking at nothing.
+    //
+    // Coloured by ROS convention (x red, y green, z blue) and drawn along the ROS axes, not
+    // Unity's: ROS +x forward is Unity +z, ROS +y left is Unity -x, ROS +z up is Unity +y. So the
+    // red bar points where the robot's x does, which is what makes this readable next to RViz.
+    static void CreateAxisTriad(Transform parent, float length, float thickness)
+    {
+        (string Name, Vector3 UnityDirection, Color Color)[] axes =
+        {
+            ("X (ROS forward)", Vector3.forward, new Color(0.95f, 0.26f, 0.21f)),
+            ("Y (ROS left)", Vector3.left, new Color(0.30f, 0.85f, 0.39f)),
+            ("Z (ROS up)", Vector3.up, new Color(0.26f, 0.52f, 0.96f)),
+        };
+
+        foreach (var axis in axes)
+        {
+            var bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            bar.name = $"TF Axis {axis.Name}";
+            bar.transform.SetParent(parent, false);
+            // The cube's local +z becomes the bar's length, so this aims it. FromToRotation rather
+            // than LookRotation: the up axis is degenerate for LookRotation's default up vector.
+            bar.transform.localRotation = Quaternion.FromToRotation(Vector3.forward, axis.UnityDirection);
+            bar.transform.localPosition = axis.UnityDirection * (length * 0.5f);
+            bar.transform.localScale = new Vector3(thickness, thickness, length);
+
+            // Marker, not a control: a collider here would sit in front of the origin and eat ray
+            // hits meant for the handle behind it
+            Object.DestroyImmediate(bar.GetComponent<Collider>());
+
+            var material = GetGeneratedMaterial($"TFAxis{axis.Name[0]}", axis.Color);
+            if (material != null)
+                bar.GetComponent<MeshRenderer>().sharedMaterial = material;
+        }
     }
 
     // ---------------------------------------------------------------------------------------
@@ -713,6 +874,131 @@ public static class XRVizCreateMVPScene
 
         browserGo.SetActive(false);
         return browserUi;
+    }
+
+    // Popup list of every TF anchor: which frame each visualisation would be placed by, whether
+    // that frame has actually turned up in /tf, and a press per row to flip just that one.
+    //
+    // Sits below the topic browser on the left. The keypad owns the right and the browser the
+    // left at eye level; dropping this one under the browser keeps all three visible at once
+    // without overlap, and it stays clear of the panel's own grab handle hanging below the middle.
+    static TfAnchorPanelUI CreateTfAnchorPanel(Transform parent)
+    {
+        const int rowCount = 6;
+        const float panelHeight = 460f;
+
+        var panelGo = new GameObject("TF Anchors Panel", typeof(Canvas));
+        panelGo.transform.SetParent(parent, false);
+        var canvas = panelGo.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        var rect = panelGo.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(420f, panelHeight);
+        // Below the 640-tall topic browser, in the same left-hand column, with a gap between them
+        float dropBelow = 640f * 0.5f + 20f + panelHeight * 0.5f;
+        panelGo.transform.localPosition = new Vector3(
+            -445f * k_PanelUnitsToMeters, -dropBelow * k_PanelUnitsToMeters, 0f);
+        panelGo.transform.localRotation = Quaternion.identity;
+        panelGo.transform.localScale = Vector3.one * k_PanelUnitsToMeters;
+        StylePanel(panelGo, "TF Anchors");
+
+        var status = CreateLabel(panelGo.transform, "Status", "", new Vector2(0f, 150f), new Vector2(384f, 52f), 18f);
+        status.color = k_TextMuted;
+
+        var panelUi = panelGo.AddComponent<TfAnchorPanelUI>();
+
+        // Two lines per row (name + frame, then state), so the rows are taller than the topic
+        // browser's - the frame name is the whole point of this panel and truncating it would
+        // defeat it
+        var rows = new Button[rowCount];
+        for (int i = 0; i < rowCount; i++)
+        {
+            rows[i] = CreateButton(panelGo.transform, "", new Vector2(0f, 92f - i * 56f),
+                new Vector2(390f, 52f), 17f, true, Shade(k_ButtonNeutral, -0.25f));
+            rows[i].gameObject.name = $"Anchor Row {i}";
+            var rowLabel = rows[i].GetComponentInChildren<TextMeshProUGUI>();
+            rowLabel.alignment = TextAlignmentOptions.Left;
+            rowLabel.rectTransform.offsetMin = new Vector2(12f, 0f);
+        }
+
+        var allTfButton = CreateButton(panelGo.transform, "All TF", new Vector2(-130f, -178f), new Vector2(120f, 44f), 18f, true, k_ButtonAccent);
+        UnityEventTools.AddVoidPersistentListener(allTfButton.onClick, panelUi.AllTf);
+        var allManualButton = CreateButton(panelGo.transform, "All Manual", new Vector2(0f, -178f), new Vector2(120f, 44f), 18f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(allManualButton.onClick, panelUi.AllManual);
+        var closeButton = CreateButton(panelGo.transform, "Close", new Vector2(130f, -178f), new Vector2(120f, 44f), 18f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(closeButton.onClick, panelUi.ToggleVisibility);
+
+        var so = new SerializedObject(panelUi);
+        so.FindProperty("_status").objectReferenceValue = status;
+        var rowsProp = so.FindProperty("_rows");
+        rowsProp.arraySize = rowCount;
+        for (int i = 0; i < rowCount; i++)
+            rowsProp.GetArrayElementAtIndex(i).objectReferenceValue = rows[i];
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        panelGo.SetActive(false);
+        return panelUi;
+    }
+
+    // Popup list of every VisibilityTarget: robot, laser scan, point cloud, anything added later.
+    // One press per row shows or hides just that one; Show All / Hide All for the rest.
+    //
+    // Sits below the IP keypad on the right, mirroring the TF Anchors panel's spot under the
+    // topic browser on the left - keeps the panel group's floating popups in two predictable
+    // columns instead of scattered around the status panel.
+    static VisibilityPanelUI CreateVisibilityPanel(Transform parent)
+    {
+        const int rowCount = 6;
+        const float panelHeight = 420f;
+
+        var panelGo = new GameObject("Visibility Panel", typeof(Canvas));
+        panelGo.transform.SetParent(parent, false);
+        var canvas = panelGo.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        var rect = panelGo.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(420f, panelHeight);
+        // Below the 440-tall IP keypad, in the same right-hand column, with a gap between them
+        float dropBelow = 440f * 0.5f + 20f + panelHeight * 0.5f;
+        panelGo.transform.localPosition = new Vector3(
+            445f * k_PanelUnitsToMeters, -dropBelow * k_PanelUnitsToMeters, 0f);
+        panelGo.transform.localRotation = Quaternion.identity;
+        panelGo.transform.localScale = Vector3.one * k_PanelUnitsToMeters;
+        StylePanel(panelGo, "Visibility");
+
+        var status = CreateLabel(panelGo.transform, "Status", "", new Vector2(0f, 150f), new Vector2(384f, 30f), 17f);
+        status.color = k_TextMuted;
+
+        var panelUi = panelGo.AddComponent<VisibilityPanelUI>();
+
+        // One line per row (label + shown/hidden), unlike the TF panel's two - there's no frame
+        // name to make room for here
+        var rows = new Button[rowCount];
+        for (int i = 0; i < rowCount; i++)
+        {
+            rows[i] = CreateButton(panelGo.transform, "", new Vector2(0f, 110f - i * 40f),
+                new Vector2(390f, 38f), 17f, true, Shade(k_ButtonNeutral, -0.25f));
+            rows[i].gameObject.name = $"Visibility Row {i}";
+            var rowLabel = rows[i].GetComponentInChildren<TextMeshProUGUI>();
+            rowLabel.alignment = TextAlignmentOptions.Left;
+            rowLabel.rectTransform.offsetMin = new Vector2(12f, 0f);
+        }
+
+        var showAllButton = CreateButton(panelGo.transform, "Show All", new Vector2(-130f, -166f), new Vector2(120f, 44f), 18f, true, k_ButtonPositive);
+        UnityEventTools.AddVoidPersistentListener(showAllButton.onClick, panelUi.ShowAll);
+        var hideAllButton = CreateButton(panelGo.transform, "Hide All", new Vector2(0f, -166f), new Vector2(120f, 44f), 18f, true, k_ButtonNegative);
+        UnityEventTools.AddVoidPersistentListener(hideAllButton.onClick, panelUi.HideAll);
+        var closeButton = CreateButton(panelGo.transform, "Close", new Vector2(130f, -166f), new Vector2(120f, 44f), 18f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(closeButton.onClick, panelUi.ToggleVisibility);
+
+        var so = new SerializedObject(panelUi);
+        so.FindProperty("_status").objectReferenceValue = status;
+        var rowsProp = so.FindProperty("_rows");
+        rowsProp.arraySize = rowCount;
+        for (int i = 0; i < rowCount; i++)
+            rowsProp.GetArrayElementAtIndex(i).objectReferenceValue = rows[i];
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        panelGo.SetActive(false);
+        return panelUi;
     }
 
     // Standalone popup keypad for retyping the ROS IP address at runtime - its own root Canvas,

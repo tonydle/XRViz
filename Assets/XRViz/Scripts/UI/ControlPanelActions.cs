@@ -16,7 +16,12 @@ namespace Unity.Robotics
         [SerializeField] private TMP_Text _feedback;
         [SerializeField] private float _feedbackSeconds = 2.5f;
 
+        // Label on the TF anchoring button, rewritten to show which mode is live. The button says
+        // what you'll get, not what you have: "Anchor: TF" means pressing it switches to TF.
+        [SerializeField] private TMP_Text _tfButtonLabel;
+
         private float _feedbackExpiry;
+        private float _tfLabelNextCheck;
 
         // Every visualisation that holds geometry between messages - laser scan, point cloud,
         // anything added later that implements IClearableVisualization. Unity can't search for
@@ -56,6 +61,108 @@ namespace Unity.Robotics
                 : $"reset {Count(handles.Length, "anchor")}");
         }
 
+        // Flip every TF-capable visualisation between TF placement and hand placement. All-or-
+        // nothing on purpose: a scene with the laser on TF and the cloud by hand is showing you
+        // two different worlds at once, and this button is the "put it all back" you want when
+        // that turns out to be the case. Per-visualisation control lives in the TF Anchors panel.
+        public void ToggleTfAnchoring()
+        {
+            var anchors = FindAnchors();
+            if (anchors.Length == 0)
+            {
+                ShowFeedback("<color=#FFB300>no TF anchors in the scene</color>");
+                return;
+            }
+
+            // Mixed state resolves to "turn everything on", so one press always reaches a
+            // consistent scene rather than inverting a mess into a different mess
+            bool turnOn = false;
+            foreach (var anchor in anchors)
+            {
+                if (!anchor.AnchorToTf)
+                {
+                    turnOn = true;
+                    break;
+                }
+            }
+
+            SetTfAnchoring(turnOn);
+        }
+
+        public void SetTfAnchoring(bool anchorToTf)
+        {
+            var anchors = FindAnchors();
+            foreach (var anchor in anchors)
+                anchor.SetAnchorToTf(anchorToTf);
+
+            RenderTfButtonLabel(anchors);
+
+            if (!anchorToTf)
+            {
+                ShowFeedback($"hand placement · {Count(anchors.Length, "anchor")}");
+                return;
+            }
+
+            // SetAnchorToTf places immediately, so these statuses are this frame's, not last
+            // frame's - which matters because "TF on" with nothing resolving looks identical to
+            // "TF on" and working until you notice nothing moved
+            int placed = 0;
+            foreach (var anchor in anchors)
+            {
+                if (anchor.Status == TfAnchor.AnchorStatus.Anchored)
+                    placed++;
+            }
+
+            if (placed == anchors.Length)
+                ShowFeedback($"TF placement · {Count(placed, "anchor")}");
+            else if (placed == 0)
+                ShowFeedback($"<color=#FFB300>TF on, but no frame resolved</color> — {DescribeFailures(anchors)}");
+            else
+                ShowFeedback($"TF placement · {placed}/{anchors.Length} placed — {DescribeFailures(anchors)}");
+        }
+
+        // The first thing that went wrong, named. Every failure here has a different fix, and
+        // "0 placed" alone doesn't tell you which one you're looking at.
+        private static string DescribeFailures(TfAnchor[] anchors)
+        {
+            foreach (var anchor in anchors)
+            {
+                switch (anchor.Status)
+                {
+                    case TfAnchor.AnchorStatus.NoTfTree:
+                        return "no TF Origin in the scene";
+                    case TfAnchor.AnchorStatus.NoFrameId:
+                        return $"{anchor.Label}: no message yet";
+                    case TfAnchor.AnchorStatus.FrameNotInTf:
+                        return $"{anchor.Label}: '{anchor.FrameId}' not in /tf";
+                }
+            }
+            return "see the TF Anchors panel";
+        }
+
+        private static TfAnchor[] FindAnchors()
+        {
+            return FindObjectsByType<TfAnchor>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        }
+
+        private void RenderTfButtonLabel(TfAnchor[] anchors)
+        {
+            if (_tfButtonLabel == null)
+                return;
+
+            bool anyManual = false;
+            foreach (var anchor in anchors)
+            {
+                if (!anchor.AnchorToTf)
+                {
+                    anyManual = true;
+                    break;
+                }
+            }
+
+            _tfButtonLabel.text = anyManual ? "Anchor: TF" : "Anchor: Manual";
+        }
+
         private static string Count(int n, string noun)
         {
             return n == 1 ? $"1 {noun}" : $"{n} {noun}s";
@@ -71,6 +178,16 @@ namespace Unity.Robotics
 
         private void Update()
         {
+            // The TF Anchors panel can flip anchors individually behind this button's back, so
+            // the label is re-derived rather than only written when this script acts. Four times
+            // a second is well under the rate anyone notices and costs one find of a handful of
+            // components.
+            if (_tfButtonLabel != null && Time.unscaledTime >= _tfLabelNextCheck)
+            {
+                _tfLabelNextCheck = Time.unscaledTime + 0.25f;
+                RenderTfButtonLabel(FindAnchors());
+            }
+
             if (_feedbackExpiry <= 0f || Time.unscaledTime < _feedbackExpiry)
                 return;
 
