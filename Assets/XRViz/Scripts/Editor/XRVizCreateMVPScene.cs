@@ -29,6 +29,7 @@ public static class XRVizCreateMVPScene
         "Laser Scan", "Laser Scan Placement Handle",
         "Point Cloud", "Point Cloud Placement Handle",
         "TF Origin", "TF Origin Placement Handle",
+        "ArUco Calibration",
         "ROS Status Panel", // legacy: was a root object before the panel group was introduced
     };
     const string k_PointCloudComputePath = "Assets/XRViz/Shaders/DepthImagePointCloudGPU.compute";
@@ -342,9 +343,10 @@ public static class XRVizCreateMVPScene
         UnityEventTools.AddVoidPersistentListener(tfToggleButton.onClick, actions.ToggleTfAnchoring);
         var tfPanelButton = CreateButton(canvasGo.transform, "TF Anchors", new Vector2(105f, -242f), k_ButtonSize, 20f, true, k_ButtonNeutral);
 
-        // Opens the per-visualisation show/hide list - single centered button, since there's
-        // only one action here (the panel itself carries Show All / Hide All)
-        var visibilityPanelButton = CreateButton(canvasGo.transform, "Visibility", new Vector2(0f, -298f), new Vector2(200f, 50f), 20f, true, k_ButtonAccent);
+        // Opens the per-visualisation show/hide list, and its neighbour opens the chassis-tag
+        // calibration. Both are popups the panel itself carries no further controls for.
+        var visibilityPanelButton = CreateButton(canvasGo.transform, "Visibility", new Vector2(-105f, -298f), k_ButtonSize, 20f, true, k_ButtonAccent);
+        var calibrationPanelButton = CreateButton(canvasGo.transform, "Calibrate", new Vector2(105f, -298f), k_ButtonSize, 20f, true, k_ButtonAccent);
 
         var feedback = CreateLabel(canvasGo.transform, "Action Feedback", "",
             new Vector2(0f, -342f), new Vector2(384f, 26f), 17f);
@@ -368,11 +370,19 @@ public static class XRVizCreateMVPScene
         var visibilityPanelUi = CreateVisibilityPanel(panelRootGo.transform);
         UnityEventTools.AddVoidPersistentListener(visibilityPanelButton.onClick, visibilityPanelUi.ToggleVisibility);
 
+        // Chassis-tag calibration: the rig that reads the passthrough camera, and the popup that
+        // drives it. Built after the robot and its handle exist, since it moves both.
+        var calibrator = CreateArucoCalibrationRig(robot, robotHandle);
+        var calibrationPanelUi = CreateCalibrationPanel(panelRootGo.transform, calibrator);
+        UnityEventTools.AddVoidPersistentListener(calibrationPanelButton.onClick,
+            calibrationPanelUi.ToggleVisibility);
+
         AddRayInteractionToCanvas(canvas);
         AddRayInteractionToCanvas(keypadUi.GetComponent<Canvas>());
         AddRayInteractionToCanvas(topicBrowserUi.GetComponent<Canvas>());
         AddRayInteractionToCanvas(tfAnchorPanelUi.GetComponent<Canvas>());
         AddRayInteractionToCanvas(visibilityPanelUi.GetComponent<Canvas>());
+        AddRayInteractionToCanvas(calibrationPanelUi.GetComponent<Canvas>());
 
         // Panel starts hidden; left controller Menu button (OVRInput.Button.Start on LTouch)
         // toggles it, so it doesn't just float in view permanently. Lives on the group root
@@ -945,6 +955,156 @@ public static class XRVizCreateMVPScene
     // Sits below the IP keypad on the right, mirroring the TF Anchors panel's spot under the
     // topic browser on the left - keeps the panel group's floating popups in two predictable
     // columns instead of scattered around the status panel.
+    // The rig that reads the passthrough camera and moves the robot onto the chassis tag. Kept
+    // as its own root object rather than hung off the robot, because what it ends up moving may
+    // be the TF origin instead - it is a tool that acts on the scene, not a part of the robot.
+    static ArucoRobotCalibrator CreateArucoCalibrationRig(GameObject robot, GameObject robotHandle)
+    {
+        var rigGo = new GameObject("ArUco Calibration");
+
+        var feed = rigGo.AddComponent<PassthroughCameraFeed>();
+        var calibrator = rigGo.AddComponent<ArucoRobotCalibrator>();
+
+        // Drawn where the calibration thinks the tag is, so a wrong head-to-camera offset shows
+        // up as a square floating off the real tag rather than as a quietly misplaced robot
+        var gizmoGo = new GameObject("Marker Pose Gizmo", typeof(MeshFilter), typeof(MeshRenderer));
+        gizmoGo.transform.SetParent(rigGo.transform, false);
+        var gizmo = gizmoGo.AddComponent<MarkerPoseGizmo>();
+
+        // The tracked head, from whichever Camera Rig Building Block is in the scene. Searched
+        // by name because the rig is added by hand (Building Blocks aren't scriptable) and so
+        // cannot be referenced by anything this generator created.
+        Transform head = FindTransformByName("CenterEyeAnchor");
+        if (head == null)
+        {
+            Debug.LogWarning("[XRViz] No CenterEyeAnchor found, so the calibration rig has no " +
+                "head transform to measure the camera out from. Add the [Camera Rig] Building " +
+                "Block, then assign it on ArUco Calibration > Passthrough Camera Feed.");
+        }
+
+        var feedSo = new SerializedObject(feed);
+        feedSo.FindProperty("_headAnchor").objectReferenceValue = head;
+        feedSo.ApplyModifiedPropertiesWithoutUndo();
+
+        var so = new SerializedObject(calibrator);
+        so.FindProperty("_feed").objectReferenceValue = feed;
+        so.FindProperty("_gizmo").objectReferenceValue = gizmo;
+        so.FindProperty("_robotHandle").objectReferenceValue = robotHandle.GetComponent<PlacementHandle>();
+        so.FindProperty("_robotAnchor").objectReferenceValue = robot.GetComponent<TfAnchor>();
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        return calibrator;
+    }
+
+    static Transform FindTransformByName(string name)
+    {
+        // Include inactive: the Camera Rig's anchors are live in a build but a scene opened in
+        // the Editor may well have parts of the rig switched off
+        var transforms = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include,
+            FindObjectsSortMode.None);
+        foreach (var transform in transforms)
+        {
+            if (transform.name == name)
+                return transform;
+        }
+        return null;
+    }
+
+    // Third column, at eye level rather than tucked below another panel: this is the one popup
+    // used while walking around looking at the real robot, so it should not need stooping for.
+    static CalibrationPanelUI CreateCalibrationPanel(Transform parent, ArucoRobotCalibrator calibrator)
+    {
+        const float panelHeight = 420f;
+
+        var panelGo = new GameObject("Calibration Panel", typeof(Canvas));
+        panelGo.transform.SetParent(parent, false);
+        var canvas = panelGo.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        var rect = panelGo.GetComponent<RectTransform>();
+        rect.sizeDelta = new Vector2(420f, panelHeight);
+        panelGo.transform.localPosition = new Vector3(890f * k_PanelUnitsToMeters, 0f, 0f);
+        panelGo.transform.localRotation = Quaternion.identity;
+        panelGo.transform.localScale = Vector3.one * k_PanelUnitsToMeters;
+        StylePanel(panelGo, "Chassis Calibration");
+
+        // Generously tall and top-aligned: the status line carries the failure messages, and
+        // those name what actually went wrong, which takes more than one line to say
+        var status = CreateLabel(panelGo.transform, "Status", "", new Vector2(0f, 60f),
+            new Vector2(384f, 220f), 17f, TextAlignmentOptions.TopLeft);
+        status.color = k_TextPrimary;
+
+        var panelUi = panelGo.AddComponent<CalibrationPanelUI>();
+
+        var progressFill = CreateProgressBar(panelGo.transform, -78f, 384f, 12f);
+
+        var startButton = CreateButton(panelGo.transform, "Find Tag", new Vector2(0f, -122f),
+            new Vector2(200f, 50f), 20f, true, k_ButtonAccent);
+        UnityEventTools.AddVoidPersistentListener(startButton.onClick, calibrator.BeginCalibration);
+
+        // Apply and Cancel share the row with Find Tag; CalibrationPanelUI shows only the pair
+        // that makes sense for the state it is in
+        var applyButton = CreateButton(panelGo.transform, "Apply", new Vector2(-105f, -122f),
+            k_ButtonSize, 20f, true, k_ButtonPositive);
+        UnityEventTools.AddVoidPersistentListener(applyButton.onClick, calibrator.ConfirmCalibration);
+        var cancelButton = CreateButton(panelGo.transform, "Cancel", new Vector2(105f, -122f),
+            k_ButtonSize, 20f, true, k_ButtonNegative);
+        UnityEventTools.AddVoidPersistentListener(cancelButton.onClick, calibrator.CancelCalibration);
+
+        var closeButton = CreateButton(panelGo.transform, "Close", new Vector2(0f, -178f),
+            new Vector2(120f, 44f), 18f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(closeButton.onClick, panelUi.ToggleVisibility);
+
+        var so = new SerializedObject(panelUi);
+        so.FindProperty("_calibrator").objectReferenceValue = calibrator;
+        so.FindProperty("_status").objectReferenceValue = status;
+        so.FindProperty("_startButton").objectReferenceValue = startButton;
+        so.FindProperty("_applyButton").objectReferenceValue = applyButton;
+        so.FindProperty("_cancelButton").objectReferenceValue = cancelButton;
+        so.FindProperty("_progressFill").objectReferenceValue = progressFill;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        panelGo.SetActive(false);
+        return panelUi;
+    }
+
+    // Track plus a filled bar. Returns the fill, whose parent is the track - the panel hides the
+    // whole thing by deactivating that parent when there is no search running.
+    static Image CreateProgressBar(Transform parent, float y, float width, float height)
+    {
+        var trackGo = new GameObject("Search Progress", typeof(RectTransform), typeof(Image));
+        trackGo.transform.SetParent(parent, false);
+        var trackRect = (RectTransform)trackGo.transform;
+        trackRect.anchorMin = new Vector2(0.5f, 0.5f);
+        trackRect.anchorMax = new Vector2(0.5f, 0.5f);
+        trackRect.pivot = new Vector2(0.5f, 0.5f);
+        trackRect.anchoredPosition = new Vector2(0f, y);
+        trackRect.sizeDelta = new Vector2(width, height);
+        var trackImage = trackGo.GetComponent<Image>();
+        trackImage.sprite = GetBuiltinSprite("UISprite");
+        trackImage.type = Image.Type.Sliced;
+        trackImage.color = k_ButtonNeutral;
+        trackImage.raycastTarget = false;
+
+        var fillGo = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+        fillGo.transform.SetParent(trackGo.transform, false);
+        var fillRect = (RectTransform)fillGo.transform;
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.offsetMin = Vector2.zero;
+        fillRect.offsetMax = Vector2.zero;
+        var fillImage = fillGo.GetComponent<Image>();
+        fillImage.sprite = GetBuiltinSprite("UISprite");
+        fillImage.type = Image.Type.Filled;
+        fillImage.fillMethod = Image.FillMethod.Horizontal;
+        fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+        fillImage.fillAmount = 0f;
+        fillImage.color = k_ButtonAccent;
+        fillImage.raycastTarget = false;
+
+        trackGo.SetActive(false);
+        return fillImage;
+    }
+
     static VisibilityPanelUI CreateVisibilityPanel(Transform parent)
     {
         const int rowCount = 6;

@@ -384,6 +384,17 @@ Two things to know:
 `ControlPanelActions` finds its targets with `FindObjectsByType` at press time rather than
 holding a serialized list, so a handle you add to the scene by hand is picked up as well.
 
+## Calibrating against the real robot
+
+Two ways to line the virtual robot up with the physical one, beyond dragging its handle:
+
+- **Calibrate** on the status panel finds an ArUco tag on the real robot's chassis through the
+  passthrough camera and snaps the robot onto it — press, look at the tag, agree with the result.
+  Full guide: `ARUCO_CALIBRATION.md`. **APK only**: passthrough camera access does not exist over
+  Quest Link, so the button reports itself unavailable in the Editor.
+- `MRRobotRegistrationTool` does the same job by hand, from three point pairs. No tag, no printer,
+  no camera permission, and it works over Link.
+
 ## Placing from TF
 
 Hand placement answers "where in this room do I want to see this?". TF placement answers "where
