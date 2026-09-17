@@ -75,8 +75,6 @@ mono_crash.*
 *.unitypackage
 *.unitypackage.meta
 *.app
-# ...except the tracked release APK
-!/XRViz.apk
 
 # Burst compiler debug output (regenerated on every build)
 *_BurstDebugInformation_DoNotShip/
