@@ -3,6 +3,12 @@ using UnityEngine;
 
 namespace Unity.Robotics
 {
+    // Legacy PointCloud2 path: compute buffers drawn with Graphics.DrawProcedural.
+    //
+    // Prefer PointCloud2Visualizer. DrawProcedural renders in world space and ignores this
+    // GameObject's Transform, so nothing here can be moved by a PlacementHandle or placed by a
+    // TfAnchor - the cloud simply appears wherever the sensor frame's numbers put it relative to
+    // the world origin. Kept because it is the cheaper path for a cloud nobody needs to move.
     public class PointCloudRosGPU_PointCloud2 : MonoBehaviour
     {
         // Point cloud subscriber
@@ -35,9 +41,10 @@ namespace Unity.Robotics
                 yield return null;
             }
 
-            // Initialize once the point cloud data is ready
-            var pointPositions = m_pointCloudSub.GetLatestPoints();
-            m_totalNumPoints = pointPositions.Length;
+            // Initialize once the point cloud data is ready. The count comes from the
+            // subscriber, not the array length: the arrays are capacity-sized and their tail is
+            // left over from whatever larger cloud came before.
+            m_totalNumPoints = m_pointCloudSub.GetPointCount();
 
             m_pointPositionBuffer = new ComputeBuffer(m_totalNumPoints, sizeof(float) * 3);
             m_pointColorBuffer = new ComputeBuffer(m_totalNumPoints, sizeof(float) * 4);
@@ -59,10 +66,16 @@ namespace Unity.Robotics
             // Get the latest point cloud data
             var pointPositions = m_pointCloudSub.GetLatestPoints();
             var pointColors = m_pointCloudSub.GetLatestColors();
-            if (pointPositions.Length != m_totalNumPoints || pointColors.Length != m_totalNumPoints)
+            int pointCount = m_pointCloudSub.GetPointCount();
+            if (pointCount <= 0)
+            {
+                return;
+            }
+
+            if (pointCount != m_totalNumPoints)
             {
                 // Update buffer size if point count changes
-                m_totalNumPoints = pointPositions.Length;
+                m_totalNumPoints = pointCount;
                 m_pointPositionBuffer.Release();
                 m_pointColorBuffer.Release();
 
@@ -72,9 +85,9 @@ namespace Unity.Robotics
                 m_renderMaterial.SetBuffer("vertexColor", m_pointColorBuffer);
             }
 
-            // Update buffer data
-            m_pointPositionBuffer.SetData(pointPositions);
-            m_pointColorBuffer.SetData(pointColors);
+            // Only the live prefix of each array belongs to this cloud
+            m_pointPositionBuffer.SetData(pointPositions, 0, 0, m_totalNumPoints);
+            m_pointColorBuffer.SetData(pointColors, 0, 0, m_totalNumPoints);
 
             // Draw the point cloud
             Graphics.DrawProcedural(m_renderMaterial, m_defaultBounds, MeshTopology.Points, m_totalNumPoints, 1);

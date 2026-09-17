@@ -22,6 +22,21 @@ namespace Unity.Robotics
         public Vector3 CameraPosition;
         public Quaternion CameraRotation;
 
+        // How fast the head was moving when this frame was pulled, in m/s and deg/s.
+        //
+        // The camera pose above is sampled when the frame is READ, not when it was exposed, and
+        // the passthrough pipeline runs about 40 ms behind the world (measured on a Quest 3).
+        // Whatever the head did during those 40 ms is baked into the sample as a pose error in
+        // the direction of travel: at 60 deg/s that is 2.4 degrees, which is 6 cm of lateral
+        // error on a tag 1.5 m away.
+        //
+        // That error is BIASED, not noisy - it points the same way for as long as the head keeps
+        // moving the same way - so averaging or taking a median across samples does not remove
+        // it. The only cheap defence is to throw away frames taken while moving, which is what
+        // the calibrator does with these.
+        public float HeadLinearSpeed;
+        public float HeadAngularSpeed;
+
         // Brightness of the frame as a whole, gathered during the grayscale conversion because
         // the loop is already there. Only ever used to answer one question, and it is the first
         // question worth asking when detection finds nothing: are these pixels a picture of the
@@ -158,6 +173,15 @@ namespace Unity.Robotics
         // after an install fail every time and every run afterwards work, which reads as a
         // flaky headset rather than as a race.
         private bool _loggedOrientation;
+
+        // Head motion, tracked per frame rather than per detection pass: a flick between two
+        // detection passes 150 ms apart averages away to nothing if measured across them.
+        private Vector3 _lastHeadPosition;
+        private Quaternion _lastHeadRotation = Quaternion.identity;
+        private bool _haveLastHead;
+        private float _headLinearSpeed;
+        private float _headAngularSpeed;
+
         private float _deviceWaitDeadline;
         private const float k_DeviceWaitSeconds = 3f;
 
@@ -251,8 +275,15 @@ namespace Unity.Robotics
             Close();
         }
 
+        // Head speed, in m/s and deg/s, as of the last frame. Exposed so a caller can say why it
+        // is refusing samples rather than just collecting none.
+        public float HeadLinearSpeed => _headLinearSpeed;
+        public float HeadAngularSpeed => _headAngularSpeed;
+
         private void Update()
         {
+            TrackHeadMotion();
+
 #if UNITY_ANDROID && !UNITY_EDITOR
             // Resume opening once the permission dialog has been answered, then keep
             // retrying while the camera list is still catching up with the grant
@@ -264,6 +295,31 @@ namespace Unity.Robotics
                 OpenDevice();
             }
 #endif
+        }
+
+        private void TrackHeadMotion()
+        {
+            Transform head = _headAnchor != null ? _headAnchor
+                : (Camera.main != null ? Camera.main.transform : null);
+            if (head == null)
+            {
+                _haveLastHead = false;
+                return;
+            }
+
+            float dt = Time.unscaledDeltaTime;
+            if (dt <= 1e-5f)
+                return;
+
+            if (_haveLastHead)
+            {
+                _headLinearSpeed = (head.position - _lastHeadPosition).magnitude / dt;
+                _headAngularSpeed = Quaternion.Angle(head.rotation, _lastHeadRotation) / dt;
+            }
+
+            _lastHeadPosition = head.position;
+            _lastHeadRotation = head.rotation;
+            _haveLastHead = true;
         }
 
         // A frame is only produced when the camera has actually delivered new pixels; asking
@@ -371,6 +427,8 @@ namespace Unity.Robotics
                 Intrinsics = Intrinsics,
                 CameraPosition = position,
                 CameraRotation = rotation,
+                HeadLinearSpeed = _headLinearSpeed,
+                HeadAngularSpeed = _headAngularSpeed,
                 MinGray = minGray,
                 MaxGray = maxGray,
                 MeanGray = (byte)(graySum / (width * height)),

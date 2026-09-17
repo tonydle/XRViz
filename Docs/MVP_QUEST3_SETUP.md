@@ -37,14 +37,11 @@ XRViz layer only adds the ROS side.
    - a **Point Cloud** object (`DepthImagePointCloud` + colour/depth `RosSubscriberImage` and a
      `RosSubscriberCameraInfo` on named children) with a green **Point Cloud Placement Handle**
      that *is* the cloud's origin — see "RGBD point cloud" below
-   - a world-space **ROS Control Panel** group holding three sibling canvases:
-     - the **ROS Status Panel** (`RosConnectionStatusUI` + `ControlPanelActions`) showing IP,
-       connection state, and message freshness, a key for the handle colours, and
-       **Connect**/**Disconnect**/**Edit IP**/**Topics**/**Clear Scan**/**Reset Anchors**
-       buttons (all ray-enabled)
-     - the **IP Keypad Panel** popup that **Edit IP** shows/hides
-     - the **Topic Browser Panel** popup that **Topics** shows/hides (see
-       "Browsing and switching topics" below)
+   - a world-space **ROS Control Panel** group holding one canvas: a rail of tabs
+     (**ROS** / **Topics** / **TF** / **Scene** / **Calibrate** / **Guide**) down the left and
+     one page at a time on the right, with the live connection state in the header and a
+     feedback line in the footer (`ControlPanelTabs`, `RosConnectionStatusUI`,
+     `ControlPanelActions`). All ray-enabled — see "The ROS control panel" below
 
      The group has its own cyan **Panel Placement Handle** (with `PlacementHandle`), also
      already grab-enabled, and `ControlPanelMenuToggle` on the group root hides/shows the
@@ -75,31 +72,86 @@ XRViz layer only adds the ROS side.
 
 ## The ROS control panel
 
-Three sibling world-space canvases under one group root. The status panel is always there; the
-keypad and topic browser are popups toggled from it.
+**One** world-space canvas: a rail of tabs down the left, one page at a time on the right, a
+header that always shows the connection state, and a footer that always shows what the last
+press did. 62 × 66 cm in the room.
 
-| Button | Does |
+| Tab | Page |
 | --- | --- |
-| **Connect** / **Disconnect** | the ROS TCP connection (`RosConnectionStatusUI`) |
-| **Edit IP** | shows/hides the numeric keypad — no native VR keyboard is installed to hook a `TMP_InputField` to |
-| **Topics** | shows/hides the topic browser (below) |
-| **Clear Data** | wipes every visualisation holding geometry — laser scan, point cloud, anything implementing `IClearableVisualization` |
-| **Reset Anchors** | puts every placement handle back where it started (see "Putting them back") |
-| **Anchor: TF** / **Anchor: Manual** | switches every visualisation between `/tf` placement and hand placement (see "Placing from TF"). The label says what pressing it *gets* you |
-| **TF Anchors** | shows/hides the per-visualisation TF panel |
+| **ROS** | connect, disconnect, and the endpoint address — the only page that matters until it reads connected |
+| **Topics** | ask the endpoint what it is advertising and re-point a subscriber at another topic |
+| **TF** | per-visualisation `/tf` or hand placement, with the frame each one is using |
+| **Scene** | show/hide each visualisation, **Clear Data**, **Reset Layout** |
+| **Calibrate** | the chassis-tag calibration (Android only) |
+| **Guide** | the handle colour key, and the things nobody can guess from looking |
 
-Below the status readout is the **anchor key**: a coloured dot per placement handle, generated
-from the same `k_HandleStyles` table as the handles themselves.
+Plus one page with no tab: the numeric **keypad**, reached from **Edit IP address** on the ROS
+page and returning there when you press Apply. A keypad is a step inside a task, not a place you
+would choose to go.
 
-`ControlPanelActions` owns the two scene-wide buttons and shows a one-line confirmation under
-them for a couple of seconds ("cleared 2 visualisations", "reset 4 anchors"). Without it, pressing
-**Clear Data** when there is nothing to clear is indistinguishable from a dead button — which, on
-a ray-driven UI where a near-miss produces exactly nothing, is a real failure mode.
+### Why one panel and not six
 
-**Clear Data** finds implementors of `IClearableVisualization` rather than holding a serialized
-list, so a visualisation added later is picked up with no wiring. Unity cannot search for an
-interface directly, hence the sweep over `MonoBehaviour`s — irrelevant at the rate a button is
-pressed.
+It used to be six: a status panel with eight buttons, and five popups that opened around it —
+topics left, TF anchors below them, keypad right, visibility below that, calibration a further
+0.9 m out. Each toggled independently, so several could be open at once, the group spanned about
+two metres of room, and the one page you use *while walking around looking at the real robot* was
+far enough off-axis to need turning away from the tag you were calibrating against.
+
+The single canvas fixes more than tidiness:
+
+- **Pages are plain `RectTransform`s, never nested Canvases.** This is a hard constraint.
+  `PointableCanvasModule.FindFirstRaycastWithinCanvas` discards any raycast hit whose
+  `Canvas.rootCanvas` is not the exact Canvas injected into the `PointableCanvas`, and a nested
+  Canvas reports its outermost ancestor as its `rootCanvas` — so a nested page's buttons silently
+  stop receiving hits. The old layout dodged this by making each popup a *sibling* root Canvas;
+  plain pages sidestep it entirely.
+- **One Canvas means one ray-interaction rig** instead of six, each with its own interactable
+  competing for the same pointer.
+- **A page is shown by activating its GameObject**, so `OnEnable`/`OnDisable` still do their
+  jobs: the topic browser refreshes its list when you arrive, and the calibration page cancels a
+  running search when you leave it.
+
+`ControlPanelTabs` owns all of it. The rail carries a short word per tab; the header spells out
+the full name of the page you are on, so the rail stays narrow without the tabs going cryptic.
+
+### What is always on screen
+
+- **The connection state, in the header.** `RosConnectionStatusUI` lives on the Canvas rather
+  than on the ROS page, because a hidden page stops updating — and "is this thing even
+  connected?" is the question you have while looking at the other five pages.
+- **The footer feedback line.** `ControlPanelActions` writes a one-line confirmation of the last
+  press for a couple of seconds ("cleared 2 visualisations", "reset 4 anchors", "TF on, but no
+  frame resolved — Point cloud: no message yet"). Without it, pressing **Clear Data** with
+  nothing to clear is indistinguishable from a dead button — which, on a ray-driven UI where a
+  near-miss produces exactly nothing, is a real failure mode. It lives on the group root, which
+  stays active while the panel is hidden, so it keeps expiring either way.
+
+### Showing and hiding
+
+The panel starts hidden. The left controller's **Menu** button toggles it
+(`ControlPanelMenuToggle`, polling `OVRInput.Button.Start` on `LTouch`), and **Hide** at the foot
+of the tab rail puts it away — a hand-tracking user has no Menu button, and putting the panel
+away should not need reaching for hardware.
+
+Showing it checks whether it is actually findable from where you are standing: more than 55° off
+your viewing direction, or more than 2.5 m away, and it comes to you (0.85 m in front, a little
+below eye level, facing you). Otherwise it stays exactly where you put it. A panel that always
+flew to your face would throw away a deliberate placement; one that never moved leaves you
+pressing Menu at an empty room after walking round the robot. It is summoned through its own
+`PlacementHandle` (`SetTargetPose` + `SnapToTarget`), so the grab sphere comes with it rather
+than staying behind and snapping the panel back on the next grab.
+
+### Two buttons rather than one toggle
+
+The TF page has **All → TF** and **All → Manual** side by side, where there used to be one button
+whose label flipped between `Anchor: TF` and `Anchor: Manual`. A label that flips has to be read
+twice — once for the words, once to remember whether it names the state or the action — and it is
+read at the exact moment you are looking at the robot rather than at the panel. Two buttons that
+each do what they say cost one button of space and no thinking at all.
+
+They are wired to `ControlPanelActions`, not to `TfAnchorPanelUI`'s own `AllTf`/`AllManual`,
+because those report into the footer — including *why* a frame did not resolve, which is the
+whole question when a press appears to do nothing.
 
 ### Styling
 
@@ -117,12 +169,16 @@ added to the project. `Knob.psd` is the only round built-in, so it stands in for
 the anchor key.
 
 Panel geometry is authored in UI units and scaled to metres by `k_PanelUnitsToMeters` (0.001), so
-the 420 × 500 status panel is 42 × 50 cm in the room. If you resize it, move the Panel Placement
-Handle's `_offset` to match — it has to clear the panel's half-height.
+the 620 × 660 panel is 62 × 66 cm in the room. The layout constants near the top of
+`XRVizCreateMVPScene.cs` (`k_PanelSize`, `k_RailX`, `k_TabStep`, `k_PageSize`, `k_PageCentre`) are
+all measured from the panel's centre, and every page lays itself out from *its own* centre — so a
+page says nothing about where in the panel it sits, and pages can be reordered without touching
+their contents. If you resize the panel, move the Panel Placement Handle's `_offset` to match — it
+has to clear the panel's half-height.
 
 ## Browsing and switching topics
 
-**Topics** on the status panel opens the Topic Browser, which asks the endpoint what it is
+The **Topics** tab asks the endpoint what it is
 advertising and lets you re-point the joint-state subscriber at a different topic without
 taking the headset off. Useful when `/joint_states` is silent and you need to find out
 whether the driver is publishing somewhere else (a namespace, a bag remap, `/robot/joint_states`).
@@ -155,7 +211,7 @@ How it works:
   silently goes nowhere and the callback never fires. `TopicBrowserUI` therefore runs its own
   5 s deadline and shows *no response - is ROS connected?* rather than hanging on "requesting…".
 
-Paged with **Prev**/**Next** (8 rows a page) rather than scrolled — a `ScrollRect` is fussy to
+Paged with **Prev**/**Next** (7 rows a page) rather than scrolled — a `ScrollRect` is fussy to
 drag accurately with a ray, and fixed rows need no viewport mask or layout group.
 
 To point a *different* subscriber at a topic this way, have it extend `RosSubscriber<T>`
@@ -200,7 +256,8 @@ exactly like a live one. Two things deal with that:
   mesh when nothing has arrived for that long. Set it to 0 to keep the last sweep indefinitely.
   The clock is `Time.realtimeSinceStartup` at *arrival*, not the message header stamp — the
   header is the sensor's clock, which need not agree with Unity's.
-- **Clear Scan** on the status panel wipes every `LaserScanVisualizer` in the scene immediately.
+- **Clear Data** on the panel's **Scene** tab wipes every `LaserScanVisualizer` in the scene
+  immediately.
 
 Both go through `LaserScanVisualizer.Clear()`, which also calls `RosSubscriberLaserScan.ClearData()`.
 Clearing only the mesh would not be enough — the visualiser rebuilds it every frame from the
@@ -317,6 +374,79 @@ cull for NaN and no-return depth), `_staleAfterSeconds`, and `_drawWithoutColor`
 flat grey from depth alone when no colour image has arrived, so "no depth" and "no colour" don't
 look identical while bringing a camera up.
 
+### Raw PointCloud2
+
+`PointCloud2` in the scene is the other cloud, and it is a different pipeline rather than a
+setting on the first one. `RosSubscriberPointCloud2` + `PointCloud2Visualizer` subscribe to a
+`sensor_msgs/PointCloud2` topic and draw exactly what it contains. Violet handle, its own
+`TfAnchor`, its own Visibility row.
+
+**Use the RGBD path where you have the choice.** Reconstructing from depth + `CameraInfo` moves
+far less over the socket than 32 bytes a point and costs no CPU. This path is for clouds that
+only exist as `PointCloud2` — a lidar, a node that has already fused something — and for seeing
+what a `/points` topic really holds.
+
+What the subscriber does with a message:
+
+- **Decimates before parsing.** A 640×480 organised cloud is 307200 points; parsing all of them
+  on the main thread at 30 Hz is not a thing that can work. The stride is chosen so at most
+  `_maxPoints` (30000 by default) are ever touched, so the cost is bounded by the budget rather
+  than by what the sensor sends.
+- **Drops non-finite points.** A non-dense cloud pads its gaps with NaN, and a single NaN vertex
+  poisons the mesh bounds — which culls the *entire* cloud, so this is the difference between
+  drawing and not drawing rather than a tidiness measure.
+- **Converts coordinates**, which the old version of this file did not do at all — its clouds
+  landed rotated and mirrored. FLU normally; a plain Y flip for a `*_optical_frame`, which is what
+  an RGBD `/points` topic publishes in. The decision is made exactly the way `TfAnchor` makes it,
+  so the points and the transform that places them can never disagree about the convention.
+- **Colours from the cloud where it can.** Packed `rgb`/`rgba` if the cloud has it, `intensity` if
+  asked for, otherwise a near/far range gradient. A mode that asks for a field the cloud hasn't
+  got falls back to range rather than drawing nothing.
+- **Range filters**, `_minRange`/`_maxRange`, because the first metre of a depth camera is mostly
+  noise and the last ten are mostly wall.
+
+The visualiser builds a mesh — **not** `Graphics.DrawProcedural`, which renders in world space and
+ignores the Transform, so nothing drawn that way can be grabbed or TF-anchored (that is exactly
+what `PointCloudRosGPU_PointCloud2` gets wrong, and why it is still legacy). Each point becomes
+four vertices at the same position with the quad corner in UV0, and
+`Shaders/PointCloudMeshBillboard.shader` expands them in view space. So the squares face the eye
+without the mesh being rebuilt every frame — it is rebuilt only when a cloud actually arrives —
+and it clears itself after `_staleAfterSeconds` like the scan does.
+
+### The camera image window
+
+`Camera Image` is a floating window showing any `sensor_msgs/Image` topic: a quad carrying the
+live texture, a dark backing panel, and a caption giving topic, resolution, encoding and whether
+it is live. Yellow handle. Pick its topic on the **Topics** tab like anything else.
+
+**It is not TF-placed, deliberately.** An image is a picture, not geometry — there is no pose at
+which it is "correct" — so it goes where you want to look at it and has a handle rather than a
+`TfAnchor`. The handle is **yaw-only**, so the window turns to face you as you drag it around but
+stays upright; a picture tipped out of vertical is unreadable, and unlike a sensor there is never
+a reason to aim one.
+
+Everything about how it draws comes from the message's own `encoding`, so no camera needs
+configuring. `Shaders/ImageUnlit.shader` handles the four things that each look like a broken
+camera rather than a wrong setting:
+
+| | Why |
+| --- | --- |
+| **Vertical flip** | ROS rows run top-down, Unity texels run bottom-up. `RosSubscriberImage` deliberately does *not* flip — texel `(x,y)` staying ROS pixel `(x,y)` is what keeps pixel coordinates agreeing with the camera intrinsics for the point cloud — so the flip belongs at the one place the image is actually looked at |
+| **bgr8 → rgb** | `bgr8`/`bgra8` are as common as `rgb8` and load into an RGB texture with red and blue swapped: a blue robot on an orange floor |
+| **mono8 → greyscale** | `mono8` loads as `R8` and samples as `(v,0,0)`, i.e. a pure red picture |
+| **Unlit** | passthrough MR has no useful scene lighting; a lit material renders the image near-black |
+
+There is also a `_gain` on the component. Raw 16-bit depth samples at about 0.03 at two metres —
+black — so pointing the window at a depth topic needs gain well above 1 to show anything. It is a
+brightness multiplier, not a calibrated depth view.
+
+The window blanks after `_staleAfterSeconds` (3 s) without a frame, leaving the backing panel in
+place: a window that vanishes entirely reads as "I lost the panel" rather than "the camera
+stopped". It implements `IClearableVisualization`, so **Clear Data** on the Scene tab wipes it.
+
+This replaces `ImageToMeshRenderer`, which drew the texture onto a default material and therefore
+got all four of the above wrong.
+
 ## Moving things around
 
 `PlacementHandle` is the one generic handle — a grabbable sphere that repositions whatever it is
@@ -326,7 +456,7 @@ moved with `TeleportRoot`. `_yawOnly` keeps the target upright; turn it off to a
 
 ### Which handle is which
 
-Five spheres, ~3–5 cm, colour-coded, with a matching key on the status panel:
+Seven spheres, ~3–5 cm, colour-coded, with a matching key on the panel's **Guide** tab:
 
 | Handle | Colour | Moves |
 | --- | --- | --- |
@@ -334,6 +464,8 @@ Five spheres, ~3–5 cm, colour-coded, with a matching key on the status panel:
 | Panel Placement Handle | cyan | the whole ROS Control Panel group |
 | Laser Scan Placement Handle | magenta | the laser scan visualisation |
 | Point Cloud Placement Handle | green | the RGBD cloud's **origin** — see "RGBD point cloud" |
+| PointCloud2 Placement Handle | violet | the raw `PointCloud2` cloud — see "Raw PointCloud2" |
+| Camera Image Placement Handle | yellow | the floating image window — yaw-only, so it stays upright |
 | TF Origin Placement Handle | white, a size up | the **fixed frame** — the origin of the whole TF world |
 
 Spheres rather than cubes because a cube's silhouette changes with viewing angle — at this size
@@ -342,7 +474,7 @@ red/green/blue so the three stay distinguishable with the common colour deficien
 from the greys and skin tones that fill a passthrough view.
 
 The colours live in one place, `k_HandleStyles` in `XRVizCreateMVPScene.cs`, which drives both
-the handle materials and the panel's key — so they cannot drift apart. Each handle gets a
+the handle materials and the Guide tab's key — so they cannot drift apart. Each handle gets a
 generated material in `Assets/XRViz/Materials/`, using `Shaders/HandleUnlit.shader`. It has to be
 a material *asset*: a `new Material(...)` created by an editor script is not saved anywhere the
 player build can find, so the handles would come out untinted in the APK.
@@ -370,8 +502,8 @@ you want both clickable and movable — give it a handle.
 
 ### Putting them back
 
-**Reset Anchors** on the status panel returns every `PlacementHandle` in the scene, and whatever
-it carries, to where it started. Ray grab makes it very easy to fling something behind you or
+**Reset Layout** on the panel's **Scene** tab returns every `PlacementHandle` in the scene, and
+whatever it carries, to where it started. Ray grab makes it very easy to fling something behind you or
 through a wall, and this is the way back without regenerating the scene.
 
 Two things to know:
@@ -388,10 +520,10 @@ holding a serialized list, so a handle you add to the scene by hand is picked up
 
 Two ways to line the virtual robot up with the physical one, beyond dragging its handle:
 
-- **Calibrate** on the status panel finds an ArUco tag on the real robot's chassis through the
-  passthrough camera and snaps the robot onto it — press, look at the tag, agree with the result.
+- The **Calibrate** tab finds an ArUco tag on the real robot's chassis through the passthrough
+  camera and snaps the robot onto it — press, look at the tag, agree with the result.
   Full guide: `ARUCO_CALIBRATION.md`. **APK only**: passthrough camera access does not exist over
-  Quest Link, so the button reports itself unavailable in the Editor.
+  Quest Link, so the page reports itself unavailable in the Editor.
 - `MRRobotRegistrationTool` does the same job by hand, from three point pairs. No tag, no printer,
   no camera permission, and it works over Link.
 
@@ -399,8 +531,8 @@ Two ways to line the virtual robot up with the physical one, beyond dragging its
 
 Hand placement answers "where in this room do I want to see this?". TF placement answers "where
 is this, according to the robot?". Both are useful at different points of bringing a rig up, so
-each visualisation can be switched between them at runtime — **Anchor: TF** on the status panel
-does all of them, the **TF Anchors** panel does one row at a time.
+each visualisation can be switched between them at runtime, on the panel's **TF** tab —
+**All → TF** and **All → Manual** do the lot, a press on a row does just that one.
 
 ### The one thing you align
 
@@ -418,7 +550,34 @@ along the ROS axes rather than Unity's) because that is the thing you are actual
 handle is a grip and sits a metre above it, on the opposite trolley corner from the robot's amber
 one. Line the triad up with the real base, not the sphere.
 
-Switch back to **Anchor: Manual** and each handle reappears where TF left its object
+### The TF origin's label
+
+`TfOriginIndicator`, on the TF Origin object beside `RosTfTree`, floats a card 32 cm above the
+triad saying what the triad is and what state it is in. The bars say *where* the fixed frame is;
+the card says the three things the bars cannot:
+
+| Line | Reads | Means |
+| --- | --- | --- |
+| status | `12 frames · /tf live (each chain's root)` | `/tf` is arriving; that many frames are known, measured from that fixed frame |
+| status | `waiting for /tf` (amber) | nothing has arrived yet — a connection or a topic name |
+| status | `/tf quiet 4.2 s` (amber) | it arrived and then stopped; the anchored visualisations are showing a frozen pose as if it were live |
+| status | `no RosTfTree` (red) | the indicator is on an object that is not the fixed frame |
+| anchors | `3 of 4 placed from here` | how much moves when this moves. `0 of 4` (amber) means the origin can be dragged around the room and nothing will follow |
+| move | `re-placed: ArUco calibration (2 s ago)` | the origin was just moved, and by what. The header bar turns green for eight seconds |
+
+The move line exists because a calibration that worked and one that silently did nothing look
+identical the moment after the button press — `ArucoRobotCalibrator.ApplyToTfOrigin` calls
+`TfOriginIndicator.NotifyMoved` so the card can name the cause, and a hand drag of the white
+handle is reported as `moved by hand` instead.
+
+Everything it draws is built at runtime, so dropping the component on the TF Origin object is the
+whole installation — no prefab, no wiring, and no need to re-run the scene generator. It builds
+the axis triad too if the object hasn't got one, which is what makes it self-sufficient on a bare
+GameObject; in the generated scene the generator's triad is already there and it leaves it alone.
+The card carries no raycast targets and no `GraphicRaycaster`, so it does not eat ray hits meant
+for the handles behind it.
+
+Switch back with **All → Manual** and each handle reappears where TF left its object
 (`PlacementHandle.SnapToTarget`), so nothing jumps and you carry on from there.
 
 ### Where the frames come from
@@ -533,7 +692,8 @@ File > Build Profiles > Android > **Build And Run** with the Quest 3 on USB
 for why — without it the robot builds fine but never moves in the APK.
 
 Either way, on launch you should see your room, the UR3e at roughly
-table height in front of you, and the status panel to the right.
+table height in front of you, and the control panel to the right once you press the left
+controller's Menu button.
 
 ### URDF Importer is desktop-only
 

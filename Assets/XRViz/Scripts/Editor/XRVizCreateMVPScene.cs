@@ -28,8 +28,10 @@ public static class XRVizCreateMVPScene
         "ROS Control Panel", "Panel Placement Handle",
         "Laser Scan", "Laser Scan Placement Handle",
         "Point Cloud", "Point Cloud Placement Handle",
+        "PointCloud2", "PointCloud2 Placement Handle",
+        "Camera Image", "Camera Image Placement Handle",
         "TF Origin", "TF Origin Placement Handle",
-        "ArUco Calibration",
+        "ArUco Calibration", "ROS Diagnostics",
         "ROS Status Panel", // legacy: was a root object before the panel group was introduced
     };
     const string k_PointCloudComputePath = "Assets/XRViz/Shaders/DepthImagePointCloudGPU.compute";
@@ -89,10 +91,28 @@ public static class XRVizCreateMVPScene
         Label = "TF origin (fixed frame)",
         Color = new Color(0.96f, 0.96f, 0.98f), // white
     };
+    // Violet: the sixth hue that stays apart from the other five for the common colour
+    // deficiencies. It sits next to the green RGBD cloud in the key on purpose - they are both
+    // point clouds, and which one you are looking at is a question you will have.
+    static readonly HandleStyle k_PointCloud2HandleStyle = new HandleStyle
+    {
+        ObjectName = "PointCloud2 Placement Handle",
+        Label = "PointCloud2 origin",
+        Color = new Color(0.55f, 0.45f, 1f),
+    };
+    // Yellow. Seven distinct hues is the practical ceiling for handles read through
+    // passthrough, and this is the last one that stays apart from the rest - it is warmer and
+    // much brighter than the robot's amber, which is the only one it is close to in hue.
+    static readonly HandleStyle k_ImageWindowHandleStyle = new HandleStyle
+    {
+        ObjectName = "Camera Image Placement Handle",
+        Label = "Camera image window",
+        Color = new Color(1f, 0.87f, 0.25f),
+    };
     static readonly HandleStyle[] k_HandleStyles =
     {
         k_RobotHandleStyle, k_PanelHandleStyle, k_ScanHandleStyle, k_PointCloudHandleStyle,
-        k_TfOriginHandleStyle,
+        k_PointCloud2HandleStyle, k_ImageWindowHandleStyle, k_TfOriginHandleStyle,
     };
 
     const string k_MaterialFolder = "Assets/XRViz/Materials";
@@ -114,10 +134,30 @@ public static class XRVizCreateMVPScene
     static readonly Color k_ButtonNegative = new Color(0.44f, 0.16f, 0.16f);
 
     const float k_HeaderHeight = 54f;
-    // Tall enough for the status block, a key row per handle, five button rows and the
-    // feedback line - see the layout constants in Run(), which are all measured from the centre
-    static readonly Vector2 k_StatusPanelSize = new Vector2(420f, 752f);
-    static readonly Vector2 k_ButtonSize = new Vector2(190f, 50f);
+
+    // --- Panel geometry ------------------------------------------------------------------
+    //
+    // ONE panel, 0.62 x 0.66 m: a rail of tabs down the left, one page at a time on the right,
+    // a header that always shows the connection state and a footer that always shows what the
+    // last press did. It replaces a 420 x 752 status panel plus five popups that floated around
+    // it across about two metres of room.
+    //
+    // All of these are canvas units measured from the panel's centre, so each number reads
+    // directly as "this far from the middle".
+    static readonly Vector2 k_PanelSize = new Vector2(620f, 660f);
+
+    // Tab rail
+    const float k_RailX = -230f;
+    const float k_TabTopY = 216f;
+    const float k_TabStep = 62f;
+    const float k_RailDividerX = -148f;
+    static readonly Vector2 k_TabSize = new Vector2(150f, 54f);
+
+    // The content area every page is laid out inside, from its own centre
+    static readonly Vector2 k_PageSize = new Vector2(420f, 520f);
+    static readonly Vector2 k_PageCentre = new Vector2(86f, -10f);
+
+    static readonly Vector2 k_ButtonSize = new Vector2(194f, 54f);
 
     [MenuItem("XRViz/Create MR MVP Scene (UR3e)")]
     public static void Run()
@@ -191,6 +231,10 @@ public static class XRVizCreateMVPScene
         tfOriginGo.transform.SetPositionAndRotation(k_RobotBasePosition, Quaternion.identity);
         tfOriginGo.AddComponent<RosTfTree>();
         CreateAxisTriad(tfOriginGo.transform, length: 0.15f, thickness: 0.008f);
+        // The bars say where the fixed frame is; this says what it IS - and whether /tf is
+        // arriving into it, how many visualisations are placed from it, and when something
+        // (the ArUco calibration, most importantly) has just moved it.
+        tfOriginGo.AddComponent<TfOriginIndicator>();
 
         var tfHandleOffset = new Vector3(0.395f, 1.125f, 0.405f);
         CreatePlacementHandle(k_TfOriginHandleStyle, k_RobotBasePosition + tfHandleOffset,
@@ -286,164 +330,285 @@ public static class XRVizCreateMVPScene
         AddTfAnchor(cloudGo, cloudHandle, depthSub, frameId: string.Empty, label: "Point cloud");
         AddVisibilityTarget(cloudGo, "Point Cloud");
 
-        // World-space ROS control panel: the status panel and the IP keypad are sibling
-        // Canvases under a plain Transform, NOT one Canvas nested inside the other.
+        // Raw sensor_msgs/PointCloud2, drawn as a mesh of camera-facing squares. Separate from
+        // the RGBD cloud above rather than a mode of it, because the two are genuinely different
+        // pipelines: that one reconstructs on the GPU from depth + CameraInfo and moves far less
+        // over the socket, this one draws whatever a /points topic actually contains. A lidar, or
+        // a node that has already fused something, only ever offers the latter.
+        //
+        // Placed to the robot's left so it doesn't start inside the RGBD cloud, and levelled the
+        // same way (yaw only) so its floor stays parallel to the room's.
+        var cloud2Position = new Vector3(-0.9f, 1.0f, 0.5f);
+        var cloud2Go = new GameObject("PointCloud2", typeof(MeshFilter), typeof(MeshRenderer));
+        cloud2Go.transform.SetPositionAndRotation(cloud2Position, Quaternion.identity);
+
+        var cloud2Sub = cloud2Go.AddComponent<RosSubscriberPointCloud2>();
+        var cloud2SubSo = new SerializedObject(cloud2Sub);
+        // No default topic, like the scan and the RGBD cloud - Subscribe() no-ops on an empty
+        // string, so this stays unsubscribed until a topic is picked from the Topics tab
+        cloud2SubSo.FindProperty("_topic").stringValue = "";
+        cloud2SubSo.ApplyModifiedPropertiesWithoutUndo();
+
+        var cloud2Vis = cloud2Go.AddComponent<PointCloud2Visualizer>();
+        var cloud2VisSo = new SerializedObject(cloud2Vis);
+        cloud2VisSo.FindProperty("_cloudSub").objectReferenceValue = cloud2Sub;
+        cloud2VisSo.ApplyModifiedPropertiesWithoutUndo();
+
+        // Handle below the cloud's origin, like the scan's. Unlike the RGBD cloud this origin is
+        // the sensor frame rather than an optical centre to be aimed, so yaw-only is right.
+        var cloud2Handle = CreatePlacementHandle(k_PointCloud2HandleStyle,
+            cloud2Position + new Vector3(0f, -0.15f, 0f), 0.03f,
+            target: cloud2Go.transform, articulationBody: null,
+            offset: new Vector3(0f, 0.15f, 0f));
+
+        // Frame comes from the cloud's own header, so retargeting the topic retargets the anchor.
+        // TfAnchor applies the optical-frame correction automatically on a *_optical_frame, which
+        // is what an RGBD /points topic publishes in - and RosSubscriberPointCloud2 decides the
+        // same way, so the points and the transform placing them always agree.
+        AddTfAnchor(cloud2Go, cloud2Handle, cloud2Sub, frameId: string.Empty, label: "PointCloud2");
+        AddVisibilityTarget(cloud2Go, "PointCloud2");
+
+        // Floating camera image window. Not TF-anchored and deliberately so: an image is a
+        // picture rather than geometry, and there is no pose at which it is "correct" - it goes
+        // where you want to look at it. Hence a handle and no TfAnchor.
+        //
+        // Placed to the robot's right at eye height, facing the same way the control panel does.
+        var imagePosition = new Vector3(-0.75f, 1.35f, 1.1f);
+        var imageGo = new GameObject("Camera Image", typeof(MeshFilter), typeof(MeshRenderer));
+        imageGo.transform.SetPositionAndRotation(imagePosition,
+            Quaternion.LookRotation(imagePosition - new Vector3(0f, 1.5f, 0f)));
+
+        var imageSub = CreateImageSubscriber(imageGo.transform, "Camera Image Source", "");
+
+        var imageWindow = imageGo.AddComponent<ImageWindow>();
+        var imageWindowSo = new SerializedObject(imageWindow);
+        imageWindowSo.FindProperty("_imageSub").objectReferenceValue = imageSub;
+        imageWindowSo.ApplyModifiedPropertiesWithoutUndo();
+
+        // Yaw only, which is the whole point: the window follows the handle around the room and
+        // turns to face you, but stays upright. A picture tipped out of vertical is unreadable,
+        // and unlike a sensor there is no reason ever to aim one.
+        var imageHandleOffset = new Vector3(0f, -0.3f, 0f);
+        CreatePlacementHandle(k_ImageWindowHandleStyle, imagePosition + imageHandleOffset, 0.035f,
+            target: imageGo.transform, articulationBody: null, offset: -imageHandleOffset,
+            yawOnly: true);
+
+        AddVisibilityTarget(imageGo, "Camera Image");
+
+        // World-space ROS control panel: ONE Canvas, a rail of tabs down the left, one page
+        // showing at a time.
+        //
+        // Pages are plain RectTransforms under this Canvas and must never be nested Canvases.
         // PointableCanvasModule.FindFirstRaycastWithinCanvas discards any raycast hit whose
         // Canvas.rootCanvas isn't the exact Canvas injected into the PointableCanvas, and a
-        // nested Canvas reports its outermost ancestor as its rootCanvas - so nesting the
-        // keypad inside the status panel silently killed every keypad button hit (and made
-        // the module's canvas.worldCamera assignment a no-op). Keep them siblings.
+        // nested Canvas reports its outermost ancestor as its rootCanvas - so a nested page's
+        // buttons silently stop receiving hits. The previous layout dodged that by making each
+        // popup a SIBLING root Canvas, which worked, but put six panels in a two-metre cross
+        // around the user (the calibration one 0.9 m off to the right, a head turn away from the
+        // robot you are calibrating against), let several be open at once, and needed a
+        // ray-interaction rig per Canvas. One Canvas with plain pages needs one rig and keeps
+        // every control in the same place.
         var panelPosition = new Vector3(0.5f, 1.3f, 0.9f);
         var panelRootGo = new GameObject("ROS Control Panel");
         panelRootGo.transform.SetPositionAndRotation(
             panelPosition, Quaternion.LookRotation(panelPosition - new Vector3(0f, 1.5f, 0f)));
 
-        var canvasGo = new GameObject("ROS Status Panel", typeof(Canvas));
+        // Both of these live on the group root, which stays active while the panel is hidden:
+        // the menu toggle has to keep polling for the Menu button, and the feedback line has to
+        // keep expiring no matter which page is open.
+        var menuToggle = panelRootGo.AddComponent<ControlPanelMenuToggle>();
+        var actions = panelRootGo.AddComponent<ControlPanelActions>();
+
+        var canvasGo = new GameObject("ROS Panel", typeof(Canvas));
         canvasGo.transform.SetParent(panelRootGo.transform, false);
         var canvas = canvasGo.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.WorldSpace;
         var canvasRect = canvasGo.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = k_StatusPanelSize;
+        canvasRect.sizeDelta = k_PanelSize;
         canvasGo.transform.localScale = Vector3.one * k_PanelUnitsToMeters;
-        StylePanel(canvasGo, "XRViz  ·  ROS Control");
 
-        // Everything below the header is laid out from the canvas centre, so the numbers here
-        // read directly as "this far above/below the middle of the panel"
-        var text = CreateLabel(canvasGo.transform, "Status Text", "ROS status…",
-            new Vector2(0f, 200f), new Vector2(384f, 110f), 22f, TextAlignmentOptions.TopLeft);
+        // Title left, live connection state right. The connection is the one piece of state
+        // worth seeing from every page, and a centred title leaves nowhere to put it.
+        var title = StylePanel(canvasGo, "XRViz");
+        title.alignment = TextAlignmentOptions.Left;
+        title.rectTransform.offsetMin = new Vector2(18f, 0f);
+        var headerStatus = CreateHeaderStatus(title.transform.parent);
 
-        CreateDivider(canvasGo.transform, 134f, 384f);
-        CreateAnchorKey(canvasGo.transform, headingY: 120f, firstRowY: 92f, rowStep: 26f);
-        CreateDivider(canvasGo.transform, -40f, 384f);
-
+        // The status component goes on the Canvas rather than on the ROS page, because a hidden
+        // page stops updating - and the header connection state must not freeze the moment you
+        // open Topics.
         var jointStateSub = robot.GetComponentInChildren<RosSubscriberJointState>();
-
         var statusUi = canvasGo.AddComponent<RosConnectionStatusUI>();
+        var tabs = canvasGo.AddComponent<ControlPanelTabs>();
+
+        // Chassis-tag calibration rig, built before the pages since the Calibrate page drives it
+        var calibrator = CreateArucoCalibrationRig(robot, robotHandle);
+
+        // A short word on the tab, the full name in the header once you are there - the rail
+        // stays narrow without the tabs becoming cryptic.
+        (string Tab, string Title)[] pageNames =
+        {
+            ("ROS", "XRViz  \u00b7  ROS connection"),
+            ("Topics", "XRViz  \u00b7  Topics"),
+            ("TF", "XRViz  \u00b7  TF placement"),
+            ("Scene", "XRViz  \u00b7  Scene"),
+            ("Calibrate", "XRViz  \u00b7  Chassis calibration"),
+            ("Guide", "XRViz  \u00b7  Guide"),
+            // The keypad has no tab: it is a step inside changing the IP, not a place you visit
+            (null, "XRViz  \u00b7  ROS IP address"),
+        };
+        const int keypadPageIndex = 6;
+
+        var pageRoots = new GameObject[pageNames.Length];
+        for (int i = 0; i < pageNames.Length; i++)
+            pageRoots[i] = CreatePage(canvasGo.transform, (pageNames[i].Tab ?? "Keypad") + " Page");
+
+        CreateKeypadPage(pageRoots[keypadPageIndex].transform, statusUi, tabs);
+        var rosStatusText = CreateRosPage(pageRoots[0].transform, statusUi, tabs, keypadPageIndex);
+        CreateTopicsPage(pageRoots[1].transform,
+            new MonoBehaviour[]
+            {
+                jointStateSub, scanSub, colorSub, depthSub, depthInfoSub, cloud2Sub, imageSub,
+            });
+        CreateFramesPage(pageRoots[2].transform, actions);
+        CreateScenePage(pageRoots[3].transform, actions);
+        CreateCalibratePage(pageRoots[4].transform, calibrator);
+        CreateGuidePage(pageRoots[5].transform);
+
         var statusSo = new SerializedObject(statusUi);
         statusSo.FindProperty("_jointStateSub").objectReferenceValue = jointStateSub;
-        statusSo.FindProperty("_statusText").objectReferenceValue = text;
+        statusSo.FindProperty("_statusText").objectReferenceValue = rosStatusText;
+        statusSo.FindProperty("_headerStatus").objectReferenceValue = headerStatus;
         statusSo.ApplyModifiedPropertiesWithoutUndo();
 
-        var actions = panelRootGo.AddComponent<ControlPanelActions>();
+        // The rail, and the rule that separates it from the page
+        CreateVerticalDivider(canvasGo.transform, k_RailDividerX, top: 250f, bottom: -284f);
 
-        var connectButton = CreateButton(canvasGo.transform, "Connect", new Vector2(-105f, -74f), k_ButtonSize, 20f, true, k_ButtonPositive);
-        UnityEventTools.AddVoidPersistentListener(connectButton.onClick, statusUi.Connect);
-        var disconnectButton = CreateButton(canvasGo.transform, "Disconnect", new Vector2(105f, -74f), k_ButtonSize, 20f, true, k_ButtonNegative);
-        UnityEventTools.AddVoidPersistentListener(disconnectButton.onClick, statusUi.Disconnect);
-        var editIpButton = CreateButton(canvasGo.transform, "Edit IP", new Vector2(-105f, -130f), k_ButtonSize, 20f, true, k_ButtonAccent);
-        var topicsButton = CreateButton(canvasGo.transform, "Topics", new Vector2(105f, -130f), k_ButtonSize, 20f, true, k_ButtonAccent);
-        var clearDataButton = CreateButton(canvasGo.transform, "Clear Data", new Vector2(-105f, -186f), k_ButtonSize, 20f, true, k_ButtonNeutral);
-        UnityEventTools.AddVoidPersistentListener(clearDataButton.onClick, actions.ClearVisualizations);
-        var resetAnchorsButton = CreateButton(canvasGo.transform, "Reset Anchors", new Vector2(105f, -186f), k_ButtonSize, 20f, true, k_ButtonNeutral);
-        UnityEventTools.AddVoidPersistentListener(resetAnchorsButton.onClick, actions.ResetAnchors);
+        var tabButtons = new Button[pageNames.Length - 1]; // every page but the keypad
+        for (int i = 0; i < tabButtons.Length; i++)
+        {
+            tabButtons[i] = CreateButton(canvasGo.transform, pageNames[i].Tab,
+                new Vector2(k_RailX, k_TabTopY - i * k_TabStep), k_TabSize, 21f, true, k_ButtonNeutral);
+            UnityEventTools.AddIntPersistentListener(tabButtons[i].onClick, tabs.ShowPage, i);
+        }
 
-        // Says what pressing it gets you, not what mode you're in - ControlPanelActions rewrites
-        // this label, including when the TF Anchors panel changes anchors behind its back
-        var tfToggleButton = CreateButton(canvasGo.transform, "Anchor: TF", new Vector2(-105f, -242f), k_ButtonSize, 20f, true, k_ButtonAccent);
-        UnityEventTools.AddVoidPersistentListener(tfToggleButton.onClick, actions.ToggleTfAnchoring);
-        var tfPanelButton = CreateButton(canvasGo.transform, "TF Anchors", new Vector2(105f, -242f), k_ButtonSize, 20f, true, k_ButtonNeutral);
+        // Dismissing the panel from the panel. The Menu button does it too, but that is a
+        // controller button - a hand-tracking user hasn't got one, and putting the panel away
+        // shouldn't need reaching for hardware.
+        var hideButton = CreateButton(canvasGo.transform, "Hide", new Vector2(k_RailX, -250f),
+            new Vector2(k_TabSize.x, 46f), 19f, true, Shade(k_ButtonNeutral, -0.25f));
+        UnityEventTools.AddVoidPersistentListener(hideButton.onClick, menuToggle.Hide);
 
-        // Opens the per-visualisation show/hide list, and its neighbour opens the chassis-tag
-        // calibration. Both are popups the panel itself carries no further controls for.
-        var visibilityPanelButton = CreateButton(canvasGo.transform, "Visibility", new Vector2(-105f, -298f), k_ButtonSize, 20f, true, k_ButtonAccent);
-        var calibrationPanelButton = CreateButton(canvasGo.transform, "Calibrate", new Vector2(105f, -298f), k_ButtonSize, 20f, true, k_ButtonAccent);
-
+        // Footer: what the last press did, in one fixed place whichever page did it
+        CreateDivider(canvasGo.transform, -284f, 560f);
         var feedback = CreateLabel(canvasGo.transform, "Action Feedback", "",
-            new Vector2(0f, -342f), new Vector2(384f, 26f), 17f);
+            new Vector2(0f, -306f), new Vector2(572f, 28f), 19f);
         feedback.color = k_TextMuted;
+
         var actionsSo = new SerializedObject(actions);
         actionsSo.FindProperty("_feedback").objectReferenceValue = feedback;
-        actionsSo.FindProperty("_tfButtonLabel").objectReferenceValue =
-            tfToggleButton.GetComponentInChildren<TextMeshProUGUI>();
         actionsSo.ApplyModifiedPropertiesWithoutUndo();
 
-        var keypadUi = CreateIpKeypad(panelRootGo.transform, statusUi);
-        UnityEventTools.AddVoidPersistentListener(editIpButton.onClick, keypadUi.ToggleVisibility);
+        var tabsSo = new SerializedObject(tabs);
+        tabsSo.FindProperty("_title").objectReferenceValue = title;
+        tabsSo.FindProperty("_defaultPage").intValue = 0;
+        tabsSo.FindProperty("_activeTint").colorValue = k_ButtonAccent;
+        tabsSo.FindProperty("_inactiveTint").colorValue = Shade(k_ButtonNeutral, -0.25f);
+        var pagesProp = tabsSo.FindProperty("_pages");
+        var titlesProp = tabsSo.FindProperty("_pageTitles");
+        pagesProp.arraySize = pageRoots.Length;
+        titlesProp.arraySize = pageNames.Length;
+        for (int i = 0; i < pageRoots.Length; i++)
+        {
+            pagesProp.GetArrayElementAtIndex(i).objectReferenceValue = pageRoots[i];
+            titlesProp.GetArrayElementAtIndex(i).stringValue = pageNames[i].Title;
+        }
+        var tabsProp = tabsSo.FindProperty("_tabs");
+        tabsProp.arraySize = tabButtons.Length;
+        for (int i = 0; i < tabButtons.Length; i++)
+            tabsProp.GetArrayElementAtIndex(i).objectReferenceValue = tabButtons[i];
+        tabsSo.ApplyModifiedPropertiesWithoutUndo();
 
-        var topicBrowserUi = CreateTopicBrowser(panelRootGo.transform,
-            new MonoBehaviour[] { jointStateSub, scanSub, colorSub, depthSub, depthInfoSub });
-        UnityEventTools.AddVoidPersistentListener(topicsButton.onClick, topicBrowserUi.ToggleVisibility);
-
-        var tfAnchorPanelUi = CreateTfAnchorPanel(panelRootGo.transform);
-        UnityEventTools.AddVoidPersistentListener(tfPanelButton.onClick, tfAnchorPanelUi.ToggleVisibility);
-
-        var visibilityPanelUi = CreateVisibilityPanel(panelRootGo.transform);
-        UnityEventTools.AddVoidPersistentListener(visibilityPanelButton.onClick, visibilityPanelUi.ToggleVisibility);
-
-        // Chassis-tag calibration: the rig that reads the passthrough camera, and the popup that
-        // drives it. Built after the robot and its handle exist, since it moves both.
-        var calibrator = CreateArucoCalibrationRig(robot, robotHandle);
-        var calibrationPanelUi = CreateCalibrationPanel(panelRootGo.transform, calibrator);
-        UnityEventTools.AddVoidPersistentListener(calibrationPanelButton.onClick,
-            calibrationPanelUi.ToggleVisibility);
-
+        // One Canvas, so one ray rig - the old layout needed six, each with its own interactable
+        // competing for the same pointer
         AddRayInteractionToCanvas(canvas);
-        AddRayInteractionToCanvas(keypadUi.GetComponent<Canvas>());
-        AddRayInteractionToCanvas(topicBrowserUi.GetComponent<Canvas>());
-        AddRayInteractionToCanvas(tfAnchorPanelUi.GetComponent<Canvas>());
-        AddRayInteractionToCanvas(visibilityPanelUi.GetComponent<Canvas>());
-        AddRayInteractionToCanvas(calibrationPanelUi.GetComponent<Canvas>());
-
-        // Panel starts hidden; left controller Menu button (OVRInput.Button.Start on LTouch)
-        // toggles it, so it doesn't just float in view permanently. Lives on the group root
-        // (which stays active, so it keeps polling) and toggles the child Canvases.
-        panelRootGo.AddComponent<ControlPanelMenuToggle>();
 
         // Grab handle below the panel; the panel follows, same as the robot handle. The offset
-        // clears the panel's own half-height (752 units x 0.001 = 75.2 cm tall) plus a small gap.
-        CreatePlacementHandle(k_PanelHandleStyle, panelPosition + new Vector3(0f, -0.436f, 0f),
-            0.04f, target: panelRootGo.transform, articulationBody: null, offset: new Vector3(0f, 0.436f, 0f));
+        // clears the panel's own half-height (660 units x 0.001 = 33 cm) plus a small gap.
+        CreatePlacementHandle(k_PanelHandleStyle, panelPosition + new Vector3(0f, -0.39f, 0f),
+            0.04f, target: panelRootGo.transform, articulationBody: null, offset: new Vector3(0f, 0.39f, 0f));
+
+        // Log-only diagnostics, its own root object so it is obvious in the hierarchy and easy
+        // to switch off. It is the only way to see ROS state from a build launched over adb with
+        // nobody in the headset: nothing else connects on its own, and the topic list is
+        // otherwise only fetched when the Topics tab is opened.
+        var diagnosticsGo = new GameObject("ROS Diagnostics");
+        diagnosticsGo.AddComponent<RosDiagnosticsReporter>();
 
         EditorSceneManager.SaveScene(scene, k_ScenePath);
         AddToBuildSettings(k_ScenePath);
 
         const string nextSteps =
             "MVP scene updated and added to Build Settings. Re-running this only replaces the " +
-            "objects it generates (robot, handles, ROS panel, laser scan) - Camera Rig, Passthrough, " +
-            "and any other Building Blocks you've added are left alone and don't need to be re-added.\n\n" +
+            "objects it generates (robot, handles, ROS panel, laser scan, point cloud, ArUco " +
+            "rig) - Camera Rig, Passthrough, and any other Building Blocks you've added are left " +
+            "alone and don't need to be re-added. Inspector tweaks on the objects it DOES " +
+            "generate are replaced, so re-do those after running this.\n\n" +
+
+            "THE CONTROL PANEL is one panel with a rail of tabs down its left side, and one page " +
+            "showing at a time:\n" +
+            "  ROS - connect, disconnect, retype the endpoint IP on a keypad\n" +
+            "  Topics - ask the endpoint what it's advertising and re-point a subscriber at a " +
+            "different topic; the arrows pick which subscriber, and the list is filtered to that " +
+            "subscriber's message type\n" +
+            "  TF - per-visualisation TF/manual placement, with the frame each one is using, " +
+            "plus All to TF / All to Manual\n" +
+            "  Scene - show/hide each visualisation, Clear Data, Reset Layout\n" +
+            "  Calibrate - the chassis-tag calibration (Android only)\n" +
+            "  Guide - the handle colour key and the things nobody can guess\n\n" +
+
+            "The header carries the live connection state on every page, and the footer says what " +
+            "the last press did. The panel starts hidden; the left controller's Menu button shows " +
+            "it, Hide (under the tabs) puts it away, and pressing Menu while facing away from it " +
+            "brings it to you rather than leaving it stranded across the room.\n\n" +
+
             "Every placement handle is a small coloured sphere - amber for the robot, cyan for the " +
             "control panel, magenta for the laser scan, green for the point cloud origin, white (and " +
-            "a size up) for the TF origin, with a key on the panel itself. Each is movable out of the " +
-            "box: near grab (reach out and grab it) AND ray grab (point at it from a distance and hold " +
-            "the trigger); whatever it's pointed at follows either way.\n\n" +
+            "a size up) for the TF origin, with a key on the panel's Guide tab. Each is movable out " +
+            "of the box: near grab (reach out and grab it) AND ray grab (point at it from a distance " +
+            "and hold the trigger); whatever it's pointed at follows either way.\n\n" +
 
-            "TF ANCHORING. Press 'Anchor: TF' on the panel and the robot, laser scan and point cloud " +
+            "TF ANCHORING. Press 'All to TF' on the TF tab and the robot, laser scan and point cloud " +
             "stop being placed by hand and are placed from /tf instead - each at its own frame, all " +
             "consistent with each other. Their handles hide while that's on, because TF owns the pose; " +
             "the WHITE TF origin handle stays, and it is now the only thing to align: put its small " +
             "red/green/blue axis triad (ROS x/y/z) on the real robot's base and everything else lands " +
-            "where /tf says it is. Press again for hand " +
-            "placement, and each handle comes back where TF left its object. 'TF Anchors' opens a " +
-            "panel showing each visualisation's frame and whether it resolved, one row per press to " +
-            "flip just that one. Frames come from each topic's own header, so retargeting a topic " +
-            "retargets its anchor - except the robot's, which is typed on its TfAnchor component " +
-            "(default base_link).\n\n" +
+            "where /tf says it is. The label floating above the triad says whether /tf is arriving, " +
+            "how many visualisations are placed from it, and when something last moved it. Frames " +
+            "come from each topic's own header, so retargeting a topic retargets its anchor - except " +
+            "the robot's, which is typed on its TfAnchor component (default base_link).\n\n" +
+
+            "THE CAMERA IMAGE WINDOW (yellow handle) puts any sensor_msgs/Image topic on a " +
+            "floating panel. It is not TF-placed - an image is a picture, not geometry - so it " +
+            "goes wherever you drag it, and its handle is yaw-only so it stays upright. " +
+            "Orientation, bgr8 vs rgb8 and mono8 are all corrected from the encoding the message " +
+            "reports, so no camera needs configuring.\n\n" +
+
+            "TWO POINT CLOUDS, on purpose. 'Point Cloud' (green handle) is the RGBD path: raw " +
+            "color + depth Image plus the depth CameraInfo, reconstructed on the GPU. " +
+            "'PointCloud2' (violet handle) subscribes to a sensor_msgs/PointCloud2 topic directly " +
+            "and draws it as a mesh, so it can be grabbed and TF-anchored like anything else. " +
+            "Use the RGBD path where you have the choice - it moves far less over the socket - " +
+            "and PointCloud2 for a lidar or an already-fused /points topic.\n\n" +
+
             "THE POINT CLOUD'S HANDLE IS ITS ORIGIN. The camera's optical centre sits on that green " +
             "sphere and the cloud projects out along its +Z, so park the handle where the real " +
             "camera stands in the room and the virtual geometry lands on the real geometry. It is " +
             "the one handle that takes full rotation rather than yaw only, because a camera has to " +
             "be aimed. None of the laser scan or point cloud subscribers start with a default " +
-            "topic - pick color, depth and depth camera_info from the Topics browser before " +
+            "topic - pick color, depth and depth camera_info from the Topics tab before " +
             "either visualisation has anything to draw.\n\n" +
-            "The panel's buttons are ray-enabled (point + trigger, like a normal menu):\n" +
-            "  Connect / Disconnect - the ROS TCP connection\n" +
-            "  Edit IP - shows a numeric keypad (no native VR keyboard is installed) to retype the " +
-            "ROS IP and reconnect at runtime\n" +
-            "  Topics - shows a browser that asks the endpoint what it's advertising and re-points a " +
-            "subscriber at a different topic without leaving the headset; its ◀ ▶ picks which " +
-            "subscriber, and the list is filtered to that subscriber's message type\n" +
-            "  Clear Data - wipes every visualisation holding geometry (laser scan, point cloud). " +
-            "They also clear themselves after 3 s without a message, so a dropped sensor doesn't " +
-            "leave a stale frame hanging in the room looking live\n" +
-            "  Reset Anchors - puts every placement handle, and what it carries, back where this " +
-            "generator put it (including the panel itself)\n" +
-            "  Anchor: TF / Anchor: Manual - switches every visualisation between /tf placement and " +
-            "hand placement (the label says what pressing it gets you)\n" +
-            "  TF Anchors - per-visualisation TF/manual, with the frame each one is using\n" +
-            "  Visibility - show/hide the robot, laser scan and point cloud individually, or all " +
-            "at once; a hidden visualisation's subscriber and anchor pause with it and pick back " +
-            "up once shown again\n\n" +
-            "The panel starts hidden and toggles with the left controller's Menu button.\n\n" +
+
             "These only work once the interactor rig exists, via Meta Building Blocks " +
             "(Meta > Tools > Building Blocks) — add each ONCE per project, not per scene:\n" +
             "1. [Camera Rig] and [Passthrough]\n" +
@@ -451,6 +616,12 @@ public static class XRVizCreateMVPScene
             "3. [Ray Interaction] (the panel's buttons, and ray grab on the handles)\n" +
             "4. Optional: [Hand Tracking]\n" +
             "5. Run Meta > Tools > Project Setup Tool and Fix All for Android\n\n" +
+            "DIAGNOSTICS. The 'ROS Diagnostics' object logs, every 5 s, the connection state and " +
+            "one line per subscriber saying what it is bound to and what has reached it - no " +
+            "topic bound / 0 messages / stale / receiving. It also connects on start (the panel's " +
+            "Connect button otherwise being unpressable over adb) and dumps the endpoint's whole " +
+            "topic list grouped by type. Read it with `adb logcat -s Unity`, or switch the object " +
+            "off for a build you want silent.\n\n" +
             "Full guide: Docs/MVP_QUEST3_SETUP.md";
         Debug.Log($"[XRViz] {nextSteps}");
         EditorUtility.DisplayDialog("XRViz MVP Scene", nextSteps, "OK");
@@ -553,8 +724,8 @@ public static class XRVizCreateMVPScene
     // are built from, so the swatch colours can't drift out of sync with the things they label.
     static void CreateAnchorKey(Transform parent, float headingY, float firstRowY, float rowStep)
     {
-        var heading = CreateLabel(parent, "Anchor Key Heading", "Anchor key",
-            new Vector2(0f, headingY), new Vector2(384f, 24f), 19f, TextAlignmentOptions.Left);
+        var heading = CreateLabel(parent, "Anchor Key Heading", "Grab handles",
+            new Vector2(0f, headingY), new Vector2(400f, 26f), 19f, TextAlignmentOptions.Left);
         heading.color = k_TextMuted;
 
         for (int i = 0; i < k_HandleStyles.Length; i++)
@@ -568,7 +739,7 @@ public static class XRVizCreateMVPScene
             swatchGo.transform.SetParent(parent, false);
             var swatchRect = (RectTransform)swatchGo.transform;
             swatchRect.anchorMin = swatchRect.anchorMax = swatchRect.pivot = new Vector2(0.5f, 0.5f);
-            swatchRect.anchoredPosition = new Vector2(-172f, y);
+            swatchRect.anchoredPosition = new Vector2(-186f, y);
             swatchRect.sizeDelta = new Vector2(18f, 18f);
             var swatch = swatchGo.GetComponent<Image>();
             swatch.sprite = GetBuiltinSprite("Knob");
@@ -576,7 +747,7 @@ public static class XRVizCreateMVPScene
             swatch.raycastTarget = false;
 
             var label = CreateLabel(parent, $"Key Label ({style.Label})", style.Label,
-                new Vector2(0f, y), new Vector2(300f, 24f), 18f, TextAlignmentOptions.Left);
+                new Vector2(6f, y), new Vector2(340f, 26f), 18f, TextAlignmentOptions.Left);
             label.color = k_TextPrimary;
         }
     }
@@ -810,132 +981,224 @@ public static class XRVizCreateMVPScene
     // Popup panels
     // ---------------------------------------------------------------------------------------
 
-    // Popup topic browser: asks the endpoint what it's advertising and lets one be picked to
-    // subscribe to, from inside the headset. Its own root Canvas, sibling to the status panel
-    // (see the note at the panel group on why these must not nest), sitting to its left.
-    // Paged rather than scrolled - a ScrollRect is fiddly to hit with a ray, and fixed rows
-    // need no viewport mask, layout group or content size fitter.
-    static TopicBrowserUI CreateTopicBrowser(Transform parent, MonoBehaviour[] targets)
+    // ---------------------------------------------------------------------------------------
+    // Panel pages
+    // ---------------------------------------------------------------------------------------
+
+    // One page of the control panel: a plain RectTransform filling the content area, NEVER a
+    // Canvas of its own (see the note in Run() on rootCanvas and silently lost raycasts).
+    // Everything on a page is laid out from the page's own centre, so a page says nothing about
+    // where in the panel it sits and pages can be reordered without touching their contents.
+    static GameObject CreatePage(Transform parent, string name)
     {
-        const int rowCount = 8;
+        var go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = k_PageCentre;
+        rt.sizeDelta = k_PageSize;
+        return go;
+    }
 
-        var browserGo = new GameObject("Topic Browser Panel", typeof(Canvas));
-        browserGo.transform.SetParent(parent, false);
-        var browserCanvas = browserGo.GetComponent<Canvas>();
-        browserCanvas.renderMode = RenderMode.WorldSpace;
-        var browserRect = browserGo.GetComponent<RectTransform>();
-        browserRect.sizeDelta = new Vector2(420f, 640f);
-        // To the left of the 420-unit-wide status panel, with a gap (the keypad is right)
-        browserGo.transform.localPosition = new Vector3(-445f * k_PanelUnitsToMeters, 0f, 0f);
-        browserGo.transform.localRotation = Quaternion.identity;
-        browserGo.transform.localScale = Vector3.one * k_PanelUnitsToMeters;
-        var title = StylePanel(browserGo, "ROS Topics");
+    // The connection state, right-aligned inside the header bar so it is on screen from every
+    // page. RosConnectionStatusUI writes it.
+    static TextMeshProUGUI CreateHeaderStatus(Transform header)
+    {
+        var go = new GameObject("Connection State", typeof(TextMeshProUGUI));
+        go.transform.SetParent(header, false);
+        var label = go.GetComponent<TextMeshProUGUI>();
+        label.fontSize = 20f;
+        label.alignment = TextAlignmentOptions.Right;
+        label.color = k_TextPrimary;
+        label.raycastTarget = false;
+        var rt = label.rectTransform;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = new Vector2(12f, 0f);
+        rt.offsetMax = new Vector2(-18f, 0f);
+        return label;
+    }
 
-        var targetLabel = CreateLabel(browserGo.transform, "Target Label", "", new Vector2(0f, 228f), new Vector2(270f, 52f), 19f);
-        var status = CreateLabel(browserGo.transform, "Status", "", new Vector2(0f, 186f), new Vector2(400f, 26f), 17f);
-        status.color = k_TextMuted;
-        var pageLabel = CreateLabel(browserGo.transform, "Page Label", "1 / 1", new Vector2(0f, -214f), new Vector2(120f, 44f), 18f);
-        pageLabel.color = k_TextMuted;
+    // Separates the tab rail from the page. Same reasoning as the horizontal one: at arm's
+    // length through passthrough, whitespace alone doesn't convincingly separate two regions.
+    static void CreateVerticalDivider(Transform parent, float x, float top, float bottom)
+    {
+        var go = new GameObject("Rail Divider", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(parent, false);
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = new Vector2(x, (top + bottom) * 0.5f);
+        rt.sizeDelta = new Vector2(2f, top - bottom);
+        var image = go.GetComponent<Image>();
+        image.color = k_Divider;
+        image.raycastTarget = false;
+    }
 
-        var browserUi = browserGo.AddComponent<TopicBrowserUI>();
+    // The muted paragraph at the foot of a page saying what the page is for, or what its buttons
+    // will actually do. There is no tooltip in a headset, no hover, and no manual within reach:
+    // if a control needs a sentence, the sentence has to be on the panel next to it.
+    static TextMeshProUGUI CreateHint(Transform parent, Vector2 anchoredPosition, Vector2 size,
+        string text, float fontSize = 16f)
+    {
+        var label = CreateLabel(parent, "Hint", text, anchoredPosition, size, fontSize,
+            TextAlignmentOptions.TopLeft);
+        label.color = k_TextMuted;
+        return label;
+    }
 
-        // Which subscriber you're retargeting. Sits above the list because it decides what the
-        // list contains - the topics are filtered to the selected target's message type.
-        var prevTargetButton = CreateButton(browserGo.transform, "◀", new Vector2(-178f, 228f), new Vector2(50f, 52f), 20f, true, k_ButtonAccent);
+    // Page: the connection itself. First tab because nothing else on the panel does anything
+    // until this one says connected. Returns the status block for RosConnectionStatusUI to write.
+    static TextMeshProUGUI CreateRosPage(Transform page, RosConnectionStatusUI statusUi,
+        ControlPanelTabs tabs, int keypadPageIndex)
+    {
+        var status = CreateLabel(page, "Status Text", "ROS status\u2026", new Vector2(0f, 150f),
+            new Vector2(400f, 170f), 22f, TextAlignmentOptions.TopLeft);
+
+        CreateDivider(page, 46f, 400f);
+
+        var connectButton = CreateButton(page, "Connect", new Vector2(-102f, 0f),
+            k_ButtonSize, 21f, true, k_ButtonPositive);
+        UnityEventTools.AddVoidPersistentListener(connectButton.onClick, statusUi.Connect);
+        var disconnectButton = CreateButton(page, "Disconnect", new Vector2(102f, 0f),
+            k_ButtonSize, 21f, true, k_ButtonNegative);
+        UnityEventTools.AddVoidPersistentListener(disconnectButton.onClick, statusUi.Disconnect);
+
+        // Full width because it goes somewhere rather than doing something - the shape is the
+        // difference between "this acts now" and "this opens a thing"
+        var editIpButton = CreateButton(page, "Edit IP address", new Vector2(0f, -68f),
+            new Vector2(400f, 54f), 21f, true, k_ButtonAccent);
+        UnityEventTools.AddIntPersistentListener(editIpButton.onClick, tabs.ShowPage, keypadPageIndex);
+
+        CreateHint(page, new Vector2(0f, -178f), new Vector2(400f, 140f),
+            "Connect to the ros_tcp_endpoint node on the robot's network. Nothing else in this " +
+            "panel can do anything until this reads connected.\n\nThen pick topics on the " +
+            "Topics tab - the laser scan and the point cloud start with none.");
+
+        return status;
+    }
+
+    // Page: asks the endpoint what it is advertising and re-points a subscriber at a different
+    // topic without leaving the headset. The target picker sits above the list because it decides
+    // what the list contains - topics are filtered to the selected subscriber's message type.
+    //
+    // Paged rather than scrolled: a ScrollRect is fiddly to hit with a ray, and fixed rows need
+    // no viewport mask, layout group or content size fitter.
+    static TopicBrowserUI CreateTopicsPage(Transform page, MonoBehaviour[] targets)
+    {
+        const int rowCount = 7;
+
+        var browserUi = page.gameObject.AddComponent<TopicBrowserUI>();
+
+        var prevTargetButton = CreateButton(page, "\u25c0", new Vector2(-176f, 228f),
+            new Vector2(56f, 52f), 22f, true, k_ButtonAccent);
         UnityEventTools.AddVoidPersistentListener(prevTargetButton.onClick, browserUi.PreviousTarget);
-        var nextTargetButton = CreateButton(browserGo.transform, "▶", new Vector2(178f, 228f), new Vector2(50f, 52f), 20f, true, k_ButtonAccent);
+        var targetLabel = CreateLabel(page, "Target Label", "", new Vector2(0f, 228f),
+            new Vector2(276f, 52f), 20f);
+        var nextTargetButton = CreateButton(page, "\u25b6", new Vector2(176f, 228f),
+            new Vector2(56f, 52f), 22f, true, k_ButtonAccent);
         UnityEventTools.AddVoidPersistentListener(nextTargetButton.onClick, browserUi.NextTarget);
+
+        var status = CreateLabel(page, "Status", "", new Vector2(0f, 186f),
+            new Vector2(400f, 26f), 17f);
+        status.color = k_TextMuted;
 
         var rows = new Button[rowCount];
         for (int i = 0; i < rowCount; i++)
         {
-            rows[i] = CreateButton(browserGo.transform, "", new Vector2(0f, 148f - i * 44f), new Vector2(390f, 40f), 17f, true, Shade(k_ButtonNeutral, -0.25f));
+            rows[i] = CreateButton(page, "", new Vector2(0f, 148f - i * 46f),
+                new Vector2(400f, 42f), 18f, true, Shade(k_ButtonNeutral, -0.25f));
             rows[i].gameObject.name = $"Topic Row {i}";
-            // Topic names read better left-aligned, and they're long enough to want the room
+            // Topic names read better left-aligned, and they are long enough to want the room
             var rowLabel = rows[i].GetComponentInChildren<TextMeshProUGUI>();
             rowLabel.alignment = TextAlignmentOptions.Left;
-            rowLabel.rectTransform.offsetMin = new Vector2(12f, 0f);
+            rowLabel.rectTransform.offsetMin = new Vector2(14f, 0f);
         }
 
-        var prevButton = CreateButton(browserGo.transform, "◀ Prev", new Vector2(-130f, -214f), new Vector2(120f, 44f), 18f, true, k_ButtonNeutral);
-        UnityEventTools.AddVoidPersistentListener(prevButton.onClick, browserUi.PreviousPage);
-        var nextButton = CreateButton(browserGo.transform, "Next ▶", new Vector2(130f, -214f), new Vector2(120f, 44f), 18f, true, k_ButtonNeutral);
-        UnityEventTools.AddVoidPersistentListener(nextButton.onClick, browserUi.NextPage);
-
-        var refreshButton = CreateButton(browserGo.transform, "Refresh", new Vector2(-85f, -266f), new Vector2(150f, 44f), 18f, true, k_ButtonAccent);
+        // The list is a snapshot and nodes come and go while the app runs. It refreshes on open;
+        // this is for the node you started after opening the tab.
+        var refreshButton = CreateButton(page, "Refresh list", new Vector2(-102f, -180f),
+            new Vector2(194f, 46f), 19f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(refreshButton.onClick, browserUi.Refresh);
-        var closeButton = CreateButton(browserGo.transform, "Close", new Vector2(85f, -266f), new Vector2(150f, 44f), 18f, true, k_ButtonNeutral);
-        UnityEventTools.AddVoidPersistentListener(closeButton.onClick, browserUi.ToggleVisibility);
+
+        // "My topic isn't in the list" is nearly always the type filter, and until now the only
+        // way to check that was a tickbox in the Inspector - which is not reachable from inside a
+        // headset, where the question always gets asked.
+        var typeFilterButton = CreateButton(page, "Types: matching", new Vector2(102f, -180f),
+            new Vector2(194f, 46f), 19f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(typeFilterButton.onClick, browserUi.ToggleShowAllTypes);
+
+        var prevButton = CreateButton(page, "\u25c0 Prev", new Vector2(-132f, -232f),
+            new Vector2(130f, 46f), 18f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(prevButton.onClick, browserUi.PreviousPage);
+        var pageLabel = CreateLabel(page, "Page Label", "1 / 1", new Vector2(0f, -232f),
+            new Vector2(120f, 46f), 18f);
+        pageLabel.color = k_TextMuted;
+        var nextButton = CreateButton(page, "Next \u25b6", new Vector2(132f, -232f),
+            new Vector2(130f, 46f), 18f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(nextButton.onClick, browserUi.NextPage);
 
         var browserSo = new SerializedObject(browserUi);
         var targetsProp = browserSo.FindProperty("_targets");
         targetsProp.arraySize = targets.Length;
         for (int i = 0; i < targets.Length; i++)
             targetsProp.GetArrayElementAtIndex(i).objectReferenceValue = targets[i];
-        browserSo.FindProperty("_title").objectReferenceValue = title;
         browserSo.FindProperty("_targetLabel").objectReferenceValue = targetLabel;
         browserSo.FindProperty("_status").objectReferenceValue = status;
         browserSo.FindProperty("_pageLabel").objectReferenceValue = pageLabel;
+        browserSo.FindProperty("_typeFilterLabel").objectReferenceValue =
+            typeFilterButton.GetComponentInChildren<TextMeshProUGUI>();
         var rowsProp = browserSo.FindProperty("_rows");
         rowsProp.arraySize = rowCount;
         for (int i = 0; i < rowCount; i++)
             rowsProp.GetArrayElementAtIndex(i).objectReferenceValue = rows[i];
         browserSo.ApplyModifiedPropertiesWithoutUndo();
 
-        browserGo.SetActive(false);
         return browserUi;
     }
 
-    // Popup list of every TF anchor: which frame each visualisation would be placed by, whether
-    // that frame has actually turned up in /tf, and a press per row to flip just that one.
-    //
-    // Sits below the topic browser on the left. The keypad owns the right and the browser the
-    // left at eye level; dropping this one under the browser keeps all three visible at once
-    // without overlap, and it stays clear of the panel's own grab handle hanging below the middle.
-    static TfAnchorPanelUI CreateTfAnchorPanel(Transform parent)
+    // Page: TF placement. Which frame each visualisation would be placed by, whether that frame
+    // has actually turned up in /tf, and a press per row to flip just that one.
+    static TfAnchorPanelUI CreateFramesPage(Transform page, ControlPanelActions actions)
     {
         const int rowCount = 6;
-        const float panelHeight = 460f;
 
-        var panelGo = new GameObject("TF Anchors Panel", typeof(Canvas));
-        panelGo.transform.SetParent(parent, false);
-        var canvas = panelGo.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-        var rect = panelGo.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(420f, panelHeight);
-        // Below the 640-tall topic browser, in the same left-hand column, with a gap between them
-        float dropBelow = 640f * 0.5f + 20f + panelHeight * 0.5f;
-        panelGo.transform.localPosition = new Vector3(
-            -445f * k_PanelUnitsToMeters, -dropBelow * k_PanelUnitsToMeters, 0f);
-        panelGo.transform.localRotation = Quaternion.identity;
-        panelGo.transform.localScale = Vector3.one * k_PanelUnitsToMeters;
-        StylePanel(panelGo, "TF Anchors");
+        var panelUi = page.gameObject.AddComponent<TfAnchorPanelUI>();
 
-        var status = CreateLabel(panelGo.transform, "Status", "", new Vector2(0f, 150f), new Vector2(384f, 52f), 18f);
+        var status = CreateLabel(page, "Status", "", new Vector2(0f, 226f),
+            new Vector2(400f, 46f), 17f);
         status.color = k_TextMuted;
 
-        var panelUi = panelGo.AddComponent<TfAnchorPanelUI>();
+        // Two buttons that each do exactly what they say, replacing one button whose label
+        // flipped between naming the state and naming the action - which has to be read twice,
+        // and always at the moment you are looking at the robot rather than at the panel.
+        //
+        // Wired to ControlPanelActions rather than to this panel's own AllTf/AllManual because
+        // those report into the footer, including WHY a frame did not resolve - which is the
+        // entire question when the press appears to do nothing.
+        var allTfButton = CreateButton(page, "All \u2192 TF", new Vector2(-102f, 172f),
+            k_ButtonSize, 20f, true, k_ButtonAccent);
+        UnityEventTools.AddVoidPersistentListener(allTfButton.onClick, actions.AnchorAllTf);
+        var allManualButton = CreateButton(page, "All \u2192 Manual", new Vector2(102f, 172f),
+            k_ButtonSize, 20f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(allManualButton.onClick, actions.AnchorAllManual);
 
-        // Two lines per row (name + frame, then state), so the rows are taller than the topic
-        // browser's - the frame name is the whole point of this panel and truncating it would
+        // Two lines per row (name + frame, then state), so these are taller than the topic
+        // browser's - the frame name is the whole point of this page and truncating it would
         // defeat it
         var rows = new Button[rowCount];
         for (int i = 0; i < rowCount; i++)
         {
-            rows[i] = CreateButton(panelGo.transform, "", new Vector2(0f, 92f - i * 56f),
-                new Vector2(390f, 52f), 17f, true, Shade(k_ButtonNeutral, -0.25f));
+            rows[i] = CreateButton(page, "", new Vector2(0f, 112f - i * 56f),
+                new Vector2(400f, 52f), 17f, true, Shade(k_ButtonNeutral, -0.25f));
             rows[i].gameObject.name = $"Anchor Row {i}";
             var rowLabel = rows[i].GetComponentInChildren<TextMeshProUGUI>();
             rowLabel.alignment = TextAlignmentOptions.Left;
-            rowLabel.rectTransform.offsetMin = new Vector2(12f, 0f);
+            rowLabel.rectTransform.offsetMin = new Vector2(14f, 0f);
         }
 
-        var allTfButton = CreateButton(panelGo.transform, "All TF", new Vector2(-130f, -178f), new Vector2(120f, 44f), 18f, true, k_ButtonAccent);
-        UnityEventTools.AddVoidPersistentListener(allTfButton.onClick, panelUi.AllTf);
-        var allManualButton = CreateButton(panelGo.transform, "All Manual", new Vector2(0f, -178f), new Vector2(120f, 44f), 18f, true, k_ButtonNeutral);
-        UnityEventTools.AddVoidPersistentListener(allManualButton.onClick, panelUi.AllManual);
-        var closeButton = CreateButton(panelGo.transform, "Close", new Vector2(130f, -178f), new Vector2(120f, 44f), 18f, true, k_ButtonNeutral);
-        UnityEventTools.AddVoidPersistentListener(closeButton.onClick, panelUi.ToggleVisibility);
+        CreateHint(page, new Vector2(0f, -228f), new Vector2(400f, 60f),
+            "A press on a row flips that one visualisation. On TF, the white TF origin is the " +
+            "only thing left to line up with the real robot - everything else follows /tf.");
 
         var so = new SerializedObject(panelUi);
         so.FindProperty("_status").objectReferenceValue = status;
@@ -945,16 +1208,9 @@ public static class XRVizCreateMVPScene
             rowsProp.GetArrayElementAtIndex(i).objectReferenceValue = rows[i];
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        panelGo.SetActive(false);
         return panelUi;
     }
 
-    // Popup list of every VisibilityTarget: robot, laser scan, point cloud, anything added later.
-    // One press per row shows or hides just that one; Show All / Hide All for the rest.
-    //
-    // Sits below the IP keypad on the right, mirroring the TF Anchors panel's spot under the
-    // topic browser on the left - keeps the panel group's floating popups in two predictable
-    // columns instead of scattered around the status panel.
     // The rig that reads the passthrough camera and moves the robot onto the chassis tag. Kept
     // as its own root object rather than hung off the robot, because what it ends up moving may
     // be the TF origin instead - it is a tool that acts on the scene, not a part of the robot.
@@ -1010,49 +1266,39 @@ public static class XRVizCreateMVPScene
         return null;
     }
 
-    // Third column, at eye level rather than tucked below another panel: this is the one popup
-    // used while walking around looking at the real robot, so it should not need stooping for.
-    static CalibrationPanelUI CreateCalibrationPanel(Transform parent, ArucoRobotCalibrator calibrator)
+    // Page: chassis-tag calibration. A tab rather than a panel 0.9 m off to the right, because
+    // this is the one page used while walking around looking at the real robot - it should be
+    // where the others are, not somewhere you have to turn away from the tag to read.
+    static CalibrationPanelUI CreateCalibratePage(Transform page, ArucoRobotCalibrator calibrator)
     {
-        const float panelHeight = 420f;
-
-        var panelGo = new GameObject("Calibration Panel", typeof(Canvas));
-        panelGo.transform.SetParent(parent, false);
-        var canvas = panelGo.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-        var rect = panelGo.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(420f, panelHeight);
-        panelGo.transform.localPosition = new Vector3(890f * k_PanelUnitsToMeters, 0f, 0f);
-        panelGo.transform.localRotation = Quaternion.identity;
-        panelGo.transform.localScale = Vector3.one * k_PanelUnitsToMeters;
-        StylePanel(panelGo, "Chassis Calibration");
+        var panelUi = page.gameObject.AddComponent<CalibrationPanelUI>();
 
         // Generously tall and top-aligned: the status line carries the failure messages, and
         // those name what actually went wrong, which takes more than one line to say
-        var status = CreateLabel(panelGo.transform, "Status", "", new Vector2(0f, 60f),
-            new Vector2(384f, 220f), 17f, TextAlignmentOptions.TopLeft);
+        var status = CreateLabel(page, "Status", "", new Vector2(0f, 110f),
+            new Vector2(400f, 270f), 18f, TextAlignmentOptions.TopLeft);
         status.color = k_TextPrimary;
 
-        var panelUi = panelGo.AddComponent<CalibrationPanelUI>();
+        var progressFill = CreateProgressBar(page, -46f, 400f, 14f);
 
-        var progressFill = CreateProgressBar(panelGo.transform, -78f, 384f, 12f);
-
-        var startButton = CreateButton(panelGo.transform, "Find Tag", new Vector2(0f, -122f),
-            new Vector2(200f, 50f), 20f, true, k_ButtonAccent);
+        var startButton = CreateButton(page, "Find Tag", new Vector2(0f, -104f),
+            new Vector2(260f, 56f), 21f, true, k_ButtonAccent);
         UnityEventTools.AddVoidPersistentListener(startButton.onClick, calibrator.BeginCalibration);
 
         // Apply and Cancel share the row with Find Tag; CalibrationPanelUI shows only the pair
         // that makes sense for the state it is in
-        var applyButton = CreateButton(panelGo.transform, "Apply", new Vector2(-105f, -122f),
-            k_ButtonSize, 20f, true, k_ButtonPositive);
+        var applyButton = CreateButton(page, "Apply", new Vector2(-102f, -104f),
+            k_ButtonSize, 21f, true, k_ButtonPositive);
         UnityEventTools.AddVoidPersistentListener(applyButton.onClick, calibrator.ConfirmCalibration);
-        var cancelButton = CreateButton(panelGo.transform, "Cancel", new Vector2(105f, -122f),
-            k_ButtonSize, 20f, true, k_ButtonNegative);
+        var cancelButton = CreateButton(page, "Cancel", new Vector2(102f, -104f),
+            k_ButtonSize, 21f, true, k_ButtonNegative);
         UnityEventTools.AddVoidPersistentListener(cancelButton.onClick, calibrator.CancelCalibration);
 
-        var closeButton = CreateButton(panelGo.transform, "Close", new Vector2(0f, -178f),
-            new Vector2(120f, 44f), 18f, true, k_ButtonNeutral);
-        UnityEventTools.AddVoidPersistentListener(closeButton.onClick, panelUi.ToggleVisibility);
+        CreateHint(page, new Vector2(0f, -190f), new Vector2(400f, 100f),
+            "Android only - the headset camera cannot be opened over Quest Link or in the " +
+            "Editor, so this reports itself unavailable there.\n\nPrint the tag from " +
+            "XRViz > Export ArUco Calibration Tag, lie it flat on the chassis, and stand where " +
+            "you can see it.");
 
         var so = new SerializedObject(panelUi);
         so.FindProperty("_calibrator").objectReferenceValue = calibrator;
@@ -1063,7 +1309,6 @@ public static class XRVizCreateMVPScene
         so.FindProperty("_progressFill").objectReferenceValue = progressFill;
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        panelGo.SetActive(false);
         return panelUi;
     }
 
@@ -1105,49 +1350,52 @@ public static class XRVizCreateMVPScene
         return fillImage;
     }
 
-    static VisibilityPanelUI CreateVisibilityPanel(Transform parent)
+    // Page: what is in the room, and what state it is holding. Every VisibilityTarget gets a row
+    // that shows or hides just that one, and the two scene-wide actions live here too - they are
+    // both answers to "this visualisation is wrong", which is the question this page is for.
+    static VisibilityPanelUI CreateScenePage(Transform page, ControlPanelActions actions)
     {
         const int rowCount = 6;
-        const float panelHeight = 420f;
 
-        var panelGo = new GameObject("Visibility Panel", typeof(Canvas));
-        panelGo.transform.SetParent(parent, false);
-        var canvas = panelGo.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.WorldSpace;
-        var rect = panelGo.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(420f, panelHeight);
-        // Below the 440-tall IP keypad, in the same right-hand column, with a gap between them
-        float dropBelow = 440f * 0.5f + 20f + panelHeight * 0.5f;
-        panelGo.transform.localPosition = new Vector3(
-            445f * k_PanelUnitsToMeters, -dropBelow * k_PanelUnitsToMeters, 0f);
-        panelGo.transform.localRotation = Quaternion.identity;
-        panelGo.transform.localScale = Vector3.one * k_PanelUnitsToMeters;
-        StylePanel(panelGo, "Visibility");
+        var panelUi = page.gameObject.AddComponent<VisibilityPanelUI>();
 
-        var status = CreateLabel(panelGo.transform, "Status", "", new Vector2(0f, 150f), new Vector2(384f, 30f), 17f);
+        var status = CreateLabel(page, "Status", "", new Vector2(0f, 230f),
+            new Vector2(400f, 26f), 17f);
         status.color = k_TextMuted;
 
-        var panelUi = panelGo.AddComponent<VisibilityPanelUI>();
-
-        // One line per row (label + shown/hidden), unlike the TF panel's two - there's no frame
+        // One line per row (label + shown/hidden), unlike the TF page's two - there is no frame
         // name to make room for here
         var rows = new Button[rowCount];
         for (int i = 0; i < rowCount; i++)
         {
-            rows[i] = CreateButton(panelGo.transform, "", new Vector2(0f, 110f - i * 40f),
-                new Vector2(390f, 38f), 17f, true, Shade(k_ButtonNeutral, -0.25f));
+            rows[i] = CreateButton(page, "", new Vector2(0f, 190f - i * 44f),
+                new Vector2(400f, 40f), 18f, true, Shade(k_ButtonNeutral, -0.25f));
             rows[i].gameObject.name = $"Visibility Row {i}";
             var rowLabel = rows[i].GetComponentInChildren<TextMeshProUGUI>();
             rowLabel.alignment = TextAlignmentOptions.Left;
-            rowLabel.rectTransform.offsetMin = new Vector2(12f, 0f);
+            rowLabel.rectTransform.offsetMin = new Vector2(14f, 0f);
         }
 
-        var showAllButton = CreateButton(panelGo.transform, "Show All", new Vector2(-130f, -166f), new Vector2(120f, 44f), 18f, true, k_ButtonPositive);
+        var showAllButton = CreateButton(page, "Show All", new Vector2(-102f, -90f),
+            k_ButtonSize, 20f, true, k_ButtonPositive);
         UnityEventTools.AddVoidPersistentListener(showAllButton.onClick, panelUi.ShowAll);
-        var hideAllButton = CreateButton(panelGo.transform, "Hide All", new Vector2(0f, -166f), new Vector2(120f, 44f), 18f, true, k_ButtonNegative);
+        var hideAllButton = CreateButton(page, "Hide All", new Vector2(102f, -90f),
+            k_ButtonSize, 20f, true, k_ButtonNegative);
         UnityEventTools.AddVoidPersistentListener(hideAllButton.onClick, panelUi.HideAll);
-        var closeButton = CreateButton(panelGo.transform, "Close", new Vector2(130f, -166f), new Vector2(120f, 44f), 18f, true, k_ButtonNeutral);
-        UnityEventTools.AddVoidPersistentListener(closeButton.onClick, panelUi.ToggleVisibility);
+
+        CreateDivider(page, -130f, 400f);
+
+        var clearDataButton = CreateButton(page, "Clear Data", new Vector2(-102f, -172f),
+            k_ButtonSize, 20f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(clearDataButton.onClick, actions.ClearVisualizations);
+        var resetButton = CreateButton(page, "Reset Layout", new Vector2(102f, -172f),
+            k_ButtonSize, 20f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(resetButton.onClick, actions.ResetAnchors);
+
+        CreateHint(page, new Vector2(0f, -230f), new Vector2(400f, 56f),
+            "Clear Data wipes held geometry; a visualisation also clears itself after a few " +
+            "seconds of silence. Reset Layout puts every handle - this panel included - back " +
+            "where it started.");
 
         var so = new SerializedObject(panelUi);
         so.FindProperty("_status").objectReferenceValue = status;
@@ -1157,47 +1405,30 @@ public static class XRVizCreateMVPScene
             rowsProp.GetArrayElementAtIndex(i).objectReferenceValue = rows[i];
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        panelGo.SetActive(false);
         return panelUi;
     }
 
-    // Standalone popup keypad for retyping the ROS IP address at runtime - its own root Canvas,
-    // sibling to the status panel under the panel group root (see the note there on why it must
-    // not be nested inside the status Canvas) so it still moves along with the panel. Shown and
-    // hidden independently via the panel's "Edit IP" button, since there's no native VR keyboard
-    // installed in this project's packages to hook a TMP_InputField up to.
-    // `parent` is the group root, so localPosition here is in metres, not canvas UI units.
-    static IpKeypadUI CreateIpKeypad(Transform parent, RosConnectionStatusUI statusUi)
+    // Page: the numeric keypad for retyping the ROS IP at runtime. No native VR keyboard is
+    // installed in this project's packages, so there is nothing to hook a TMP_InputField up to.
+    //
+    // It has no tab of its own: it is a step inside changing the IP, reached from the ROS page
+    // and returning there, rather than a place you would ever choose to go.
+    static IpKeypadUI CreateKeypadPage(Transform page, RosConnectionStatusUI statusUi,
+        ControlPanelTabs tabs)
     {
-        var keypadGo = new GameObject("IP Keypad Panel", typeof(Canvas));
-        keypadGo.transform.SetParent(parent, false);
-        var keypadCanvas = keypadGo.GetComponent<Canvas>();
-        keypadCanvas.renderMode = RenderMode.WorldSpace;
-        var keypadRect = keypadGo.GetComponent<RectTransform>();
-        keypadRect.sizeDelta = new Vector2(320f, 440f);
-        // Sits to the right of the 420-unit-wide status panel with a gap between them
-        keypadGo.transform.localPosition = new Vector3(400f * k_PanelUnitsToMeters, 0f, 0f);
-        keypadGo.transform.localRotation = Quaternion.identity;
-        keypadGo.transform.localScale = Vector3.one * k_PanelUnitsToMeters;
-        StylePanel(keypadGo, "ROS IP");
+        var keypadUi = page.gameObject.AddComponent<IpKeypadUI>();
 
         var displayGo = new GameObject("Display", typeof(TextMeshProUGUI));
-        displayGo.transform.SetParent(keypadGo.transform, false);
+        displayGo.transform.SetParent(page, false);
         var display = displayGo.GetComponent<TextMeshProUGUI>();
-        display.fontSize = 28f;
+        display.fontSize = 30f;
         display.color = k_TextPrimary;
         display.raycastTarget = false;
         display.alignment = TextAlignmentOptions.Center;
         var displayRect = display.rectTransform;
         displayRect.anchorMin = displayRect.anchorMax = displayRect.pivot = new Vector2(0.5f, 0.5f);
-        displayRect.anchoredPosition = new Vector2(0f, 128f);
-        displayRect.sizeDelta = new Vector2(290f, 50f);
-
-        var keypadUi = keypadGo.AddComponent<IpKeypadUI>();
-        var keypadSo = new SerializedObject(keypadUi);
-        keypadSo.FindProperty("_display").objectReferenceValue = display;
-        keypadSo.FindProperty("_statusUi").objectReferenceValue = statusUi;
-        keypadSo.ApplyModifiedPropertiesWithoutUndo();
+        displayRect.anchoredPosition = new Vector2(0f, 208f);
+        displayRect.sizeDelta = new Vector2(380f, 58f);
 
         string[,] grid =
         {
@@ -1208,13 +1439,14 @@ public static class XRVizCreateMVPScene
         };
         for (int row = 0; row < 4; row++)
         {
-            float y = 80f - row * 58f;
+            float y = 132f - row * 62f;
             for (int col = 0; col < 3; col++)
             {
-                float x = -100f + col * 100f;
+                float x = -110f + col * 110f;
                 string key = grid[row, col];
                 bool isBackspace = key == "back";
-                var keyButton = CreateButton(keypadGo.transform, isBackspace ? "⌫" : key, new Vector2(x, y), new Vector2(90f, 50f), 22f, true, k_ButtonNeutral);
+                var keyButton = CreateButton(page, isBackspace ? "\u232b" : key,
+                    new Vector2(x, y), new Vector2(100f, 56f), 24f, true, k_ButtonNeutral);
                 if (isBackspace)
                     UnityEventTools.AddVoidPersistentListener(keyButton.onClick, keypadUi.Backspace);
                 else
@@ -1222,14 +1454,47 @@ public static class XRVizCreateMVPScene
             }
         }
 
-        var clearButton = CreateButton(keypadGo.transform, "Clear", new Vector2(-80f, -160f), new Vector2(140f, 50f), 18f, true, k_ButtonNegative);
+        var clearButton = CreateButton(page, "Clear", new Vector2(-102f, -132f),
+            k_ButtonSize, 20f, true, k_ButtonNegative);
         UnityEventTools.AddVoidPersistentListener(clearButton.onClick, keypadUi.Clear);
 
-        var applyButton = CreateButton(keypadGo.transform, "Apply", new Vector2(80f, -160f), new Vector2(140f, 50f), 18f, true, k_ButtonPositive);
+        // Apply saves the address and reconnects; the second listener walks back to the page
+        // that sent you here, so a finished edit doesn't leave you staring at a keypad
+        var applyButton = CreateButton(page, "Apply", new Vector2(102f, -132f),
+            k_ButtonSize, 20f, true, k_ButtonPositive);
         UnityEventTools.AddVoidPersistentListener(applyButton.onClick, keypadUi.Apply);
+        UnityEventTools.AddIntPersistentListener(applyButton.onClick, tabs.ShowPage, 0);
 
-        keypadGo.SetActive(false);
+        var backButton = CreateButton(page, "Back", new Vector2(0f, -204f),
+            new Vector2(200f, 46f), 19f, true, k_ButtonNeutral);
+        UnityEventTools.AddIntPersistentListener(backButton.onClick, tabs.ShowPage, 0);
+
+        var keypadSo = new SerializedObject(keypadUi);
+        keypadSo.FindProperty("_display").objectReferenceValue = display;
+        keypadSo.FindProperty("_statusUi").objectReferenceValue = statusUi;
+        keypadSo.ApplyModifiedPropertiesWithoutUndo();
+
         return keypadUi;
+    }
+
+    // Page: the handle colour key, and the half-dozen things nobody can discover by looking.
+    // This is where the key went when the main panel stopped carrying it - it is reference
+    // material you read once, and it was taking up a third of the panel on every press.
+    static void CreateGuidePage(Transform page)
+    {
+        CreateAnchorKey(page, headingY: 232f, firstRowY: 200f, rowStep: 26f);
+        CreateDivider(page, 24f, 400f);
+
+        var text = CreateLabel(page, "Guide Text",
+            "<b>Show or hide this panel</b>\nMenu button on the left controller, or Hide at the " +
+            "foot of the tabs.\n\n" +
+            "<b>Move anything</b>\nGrab its coloured sphere - reach out and grab it, or point at " +
+            "it from a distance and hold the trigger. The panel has one of its own, below it.\n\n" +
+            "<b>Lost the panel</b>\nPress Menu while facing away from it and it comes to you.\n\n" +
+            "<b>Nothing is drawing</b>\nPick topics on the Topics tab: the laser scan and the " +
+            "point cloud start with none.",
+            new Vector2(0f, -110f), new Vector2(400f, 250f), 16f, TextAlignmentOptions.TopLeft);
+        text.color = k_TextPrimary;
     }
 
     // ---------------------------------------------------------------------------------------

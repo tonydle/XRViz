@@ -22,10 +22,15 @@ namespace Unity.Robotics
         // Each must implement IRosTopicBinding. Serialized as MonoBehaviour because Unity can't
         // serialize interface references directly; validated in Awake.
         [SerializeField] private MonoBehaviour[] _targets;
-        [SerializeField] private TMP_Text _title;
         [SerializeField] private TMP_Text _targetLabel;
         [SerializeField] private TMP_Text _status;
         [SerializeField] private TMP_Text _pageLabel;
+
+        // Label on the type-filter button, rewritten to say which way it is set. "Where is my
+        // topic" is nearly always the filter, and the answer has to be reachable from inside the
+        // headset rather than from a tickbox in the Inspector.
+        [SerializeField] private TMP_Text _typeFilterLabel;
+
         [SerializeField] private Button[] _rows;
 
         // GetTopicAndTypeList has no failure path - if the endpoint isn't connected the request
@@ -58,6 +63,7 @@ namespace Unity.Robotics
         private Dictionary<string, string> _lastReply;
 
         private TMP_Text[] _rowLabels;
+        private string _lastLoggedSignature;
         private int _targetIndex;
         private int _page;
         private bool _awaitingResponse;
@@ -95,9 +101,6 @@ namespace Unity.Robotics
                 int rowIndex = i; // capture per row, not the shared loop variable
                 _rows[i].onClick.AddListener(() => SelectRow(rowIndex));
             }
-
-            if (_title != null)
-                _title.text = "ROS Topics";
         }
 
         private void OnEnable()
@@ -117,6 +120,17 @@ namespace Unity.Robotics
 
             _awaitingResponse = false;
             SetStatus("<color=#FF5252>no response</color> - is ROS connected?");
+        }
+
+        // Flips between "only topics this subscriber could actually take" and "everything the
+        // endpoint advertises". Off by default because subscribing to a mismatched type just
+        // produces deserialization errors - but when a topic you can see in `ros2 topic list`
+        // isn't in this list, this is the button that tells you whether it is the filter hiding
+        // it or the endpoint never reporting it at all.
+        public void ToggleShowAllTypes()
+        {
+            _showAllTypes = !_showAllTypes;
+            ApplyFilter();
         }
 
         public void Refresh()
@@ -171,12 +185,33 @@ namespace Unity.Robotics
         {
             _awaitingResponse = false;
             _lastReply = topicsAndTypes;
+            LogReply(topicsAndTypes);
             ApplyFilter();
+        }
+
+        // The whole reply, names and exact type strings, whenever it changes from the last one
+        // logged. The panel can only ever show the topics that got past the type filter, so when
+        // a topic is missing this is the only place the truth is written down: either it is in
+        // here (and the filter hid it) or it is not (and the endpoint never saw it). Logged on
+        // change rather than on every fetch, so opening the tab repeatedly doesn't spam.
+        private void LogReply(Dictionary<string, string> reply)
+        {
+            if (reply == null)
+                return;
+
+            string signature = string.Join("|", reply.Select(kv => kv.Key + "=" + kv.Value).OrderBy(t => t));
+            if (signature == _lastLoggedSignature)
+                return;
+            _lastLoggedSignature = signature;
+
+            Debug.Log($"[XRViz] ros_tcp_endpoint advertises {reply.Count} topic(s):\n" +
+                string.Join("\n", reply.OrderBy(kv => kv.Key).Select(kv => $"  {kv.Key}  ({kv.Value})")));
         }
 
         private void ApplyFilter()
         {
             RenderTargetLabel();
+            RenderTypeFilterLabel();
 
             if (_lastReply == null)
             {
@@ -197,7 +232,11 @@ namespace Unity.Robotics
             _page = 0;
             Render();
 
-            if (_topics.Count > 0)
+            if (_showAllTypes)
+            {
+                SetStatus($"{_topics.Count} topics \u00b7 <color=#FFB300>all types</color>");
+            }
+            else if (_topics.Count > 0)
             {
                 SetStatus($"{_topics.Count} of {_lastReply.Count} topics match");
             }
@@ -243,6 +282,13 @@ namespace Unity.Robotics
             SetStatus($"subscribed to <color=#4CAF50>{topic}</color>");
             RenderTargetLabel();
             Render(); // move the ▶ marker onto the new selection
+        }
+
+        private void RenderTypeFilterLabel()
+        {
+            if (_typeFilterLabel == null)
+                return;
+            _typeFilterLabel.text = _showAllTypes ? "Types: all" : "Types: matching";
         }
 
         private void RenderTargetLabel()

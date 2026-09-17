@@ -33,7 +33,9 @@ namespace Unity.Robotics
                 return;
             _statusUi.SetIpAddress(_display.text);
             _statusUi.Connect();
-            gameObject.SetActive(false);
+            // Where to go next is the tab strip's business, not the keypad's - the Apply button
+            // carries a second listener that walks back to the ROS page. A page that hid itself
+            // would leave the panel showing nothing at all.
         }
 
         public void ToggleVisibility()

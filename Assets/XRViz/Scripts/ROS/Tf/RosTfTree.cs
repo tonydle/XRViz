@@ -71,6 +71,9 @@ namespace Unity.Robotics
             new ConcurrentQueue<(RosTFMessage, bool)>();
 
         private float _lastMessageRealtime = -1f;
+        private float _lastStaticMessageRealtime = -1f;
+        private int _messageCount;
+        private int _staticMessageCount;
         private bool _cycleLogged;
 
         public string FixedFrame => _fixedFrame;
@@ -79,6 +82,34 @@ namespace Unity.Robotics
 
         // Time.realtimeSinceStartup of the last TF message, or -1 if none has arrived
         public float LastMessageRealtime => _lastMessageRealtime;
+
+        // The two topics are worth telling apart when nothing resolves: /tf_static is LATCHED on
+        // the ROS side and ros_tcp_endpoint only subscribes when asked, so anything published
+        // before this scene connected is simply never seen - and a chain that crosses into a
+        // static link then cannot be walked, however healthy /tf looks.
+        public float LastStaticMessageRealtime => _lastStaticMessageRealtime;
+        public int MessageCount => _messageCount;
+        public int StaticMessageCount => _staticMessageCount;
+        public string TfTopic => _tfTopic;
+        public string TfStaticTopic => _tfStaticTopic;
+
+        // One frame's link to its parent, for diagnostics. False when the frame is unknown or is
+        // a tree root (a root is known but has no entry of its own - that is what ends the walk).
+        public bool TryDescribeFrame(string frameId, out string parent, out bool isStatic,
+            out float ageSeconds)
+        {
+            parent = null;
+            isStatic = false;
+            ageSeconds = -1f;
+
+            if (string.IsNullOrEmpty(frameId) || !_frames.TryGetValue(Normalize(frameId), out var frame))
+                return false;
+
+            parent = frame.Parent;
+            isStatic = frame.IsStatic;
+            ageSeconds = Time.realtimeSinceStartup - frame.LastUpdate;
+            return true;
+        }
 
         public IEnumerable<string> KnownFrames => _known;
 
@@ -162,6 +193,12 @@ namespace Unity.Robotics
             }
 
             _lastMessageRealtime = now;
+            _messageCount++;
+            if (isStatic)
+            {
+                _lastStaticMessageRealtime = now;
+                _staticMessageCount++;
+            }
         }
 
         public bool HasFrame(string frameId)

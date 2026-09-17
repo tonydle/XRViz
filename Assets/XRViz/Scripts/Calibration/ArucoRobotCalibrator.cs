@@ -73,6 +73,25 @@ namespace Unity.Robotics
                  "result: measure the print, do not trust the page setup.")]
         [SerializeField] private float _markerSizeMetres = 0.15f;
 
+        // A size per marker id, for rigs that carry more than one tag - a big one on the chassis
+        // and a small one on the gripper, say. Size is the one thing about a marker that cannot
+        // be read out of the image: the dictionary fixes the id and the bit pattern, never the
+        // physical size, and getting it wrong scales the distance by exactly the same factor.
+        [System.Serializable]
+        public struct MarkerSize
+        {
+            public int Id;
+            public float SizeMetres;
+        }
+
+        [Tooltip("Physical sizes for individual marker ids, when they are not all the same size. " +
+                 "Any id not listed uses Marker Size Metres.")]
+        [SerializeField] private MarkerSize[] _markerSizes = new MarkerSize[0];
+
+        [Tooltip("Report every dictionary marker seen, not just the one being calibrated " +
+                 "against. Costs a pose solve per extra marker per pass, which is nothing.")]
+        [SerializeField] private bool _reportAllMarkers = true;
+
         [Header("Where the tag is on the robot")]
         [Tooltip("Height of the tag above the robot's base frame, in metres. The tag is assumed " +
                  "to lie flat on the chassis top, printed face up, centred over the base column.")]
@@ -141,6 +160,17 @@ namespace Unity.Robotics
                  "per cell for the corners to mean anything.")]
         [SerializeField] private float _minMarkerPixels = 40f;
 
+        [Tooltip("Reject readings taken while the head is turning faster than this, in degrees " +
+                 "per second. The camera pose is sampled when the frame is read, but the frame " +
+                 "is about 40 ms old, so head motion biases the reading in the direction of " +
+                 "travel - and being a bias rather than noise, averaging will not remove it. " +
+                 "Zero disables the gate.")]
+        [SerializeField] private float _maxHeadAngularSpeed = 25f;
+
+        [Tooltip("Reject readings taken while the head is moving faster than this, in metres " +
+                 "per second. Same reason as the angular limit. Zero disables the gate.")]
+        [SerializeField] private float _maxHeadLinearSpeed = 0.25f;
+
         [Header("Feedback")]
         [SerializeField] private MarkerPoseGizmo _gizmo;
 
@@ -170,6 +200,21 @@ namespace Unity.Robotics
         private int _quadsSeen;
         private int _markersSeen;
         private int _markersRejected;
+        private int _rejectedForMotion;
+
+        // Every dictionary marker seen during the search, not only the one being calibrated
+        // against: id -> how often, how big on screen, how far away, how cleanly it read
+        private readonly Dictionary<int, ObservedMarker> _observed = new Dictionary<int, ObservedMarker>();
+
+        private struct ObservedMarker
+        {
+            public int Count;
+            public float MinSidePixels;
+            public float DistanceMetres;
+            public float SizeMetres;
+            public int BitErrors;
+            public float Contrast;
+        }
 
         // Brightness of the most recent frame, kept so a search that finds nothing can say
         // whether it was looking at anything. A feed that opens and ticks but delivers a
@@ -358,6 +403,8 @@ namespace Unity.Robotics
             _lastMeanGray = 0;
             _sawUniformFrame = false;
             _mirroredSeen = 0;
+            _rejectedForMotion = 0;
+            _observed.Clear();
             _heightNudge = 0f;
 
             float deadline = Time.realtimeSinceStartup + _searchTimeoutSeconds;
@@ -473,10 +520,75 @@ namespace Unity.Robotics
 
         // Turn this pass's detections into world-space tag readings, dropping the ones that are
         // not worth averaging in.
+        private float SizeForMarker(int id)
+        {
+            if (_markerSizes != null)
+            {
+                foreach (var entry in _markerSizes)
+                {
+                    if (entry.Id == id && entry.SizeMetres > 0f)
+                        return entry.SizeMetres;
+                }
+            }
+            return _markerSizeMetres;
+        }
+
+        private bool IsHeadMoving()
+        {
+            return (_maxHeadAngularSpeed > 0f
+                    && _workerFrame.HeadAngularSpeed > _maxHeadAngularSpeed)
+                || (_maxHeadLinearSpeed > 0f
+                    && _workerFrame.HeadLinearSpeed > _maxHeadLinearSpeed);
+        }
+
+        private void Observe(ArucoDetection detection, MarkerPose pose, float size)
+        {
+            _observed.TryGetValue(detection.Id, out ObservedMarker seen);
+            seen.Count++;
+            seen.MinSidePixels = detection.MinSideLength;
+            seen.SizeMetres = size;
+            seen.BitErrors = detection.BitErrors;
+            seen.Contrast = detection.Contrast;
+            seen.DistanceMetres = pose.Valid ? pose.Position.magnitude : 0f;
+            _observed[detection.Id] = seen;
+        }
+
+        // Every dictionary marker the search saw, newest reading per id. The target is starred,
+        // so a room with several tags in it reads as a list rather than a puzzle.
+        public string DescribeObservedMarkers()
+        {
+            if (_observed.Count == 0)
+                return "no markers seen";
+
+            var ids = new List<int>(_observed.Keys);
+            ids.Sort();
+
+            var parts = new List<string>(ids.Count);
+            foreach (int id in ids)
+            {
+                ObservedMarker m = _observed[id];
+                string distance = m.DistanceMetres > 0f ? $"{m.DistanceMetres:F2} m" : "no pose";
+                parts.Add($"{(id == _markerId ? "*" : "")}id {id}: {m.Count}x, " +
+                          $"{m.MinSidePixels:F0} px, {distance} @ {m.SizeMetres * 1000f:F0} mm, " +
+                          $"{m.BitErrors} bit err, contrast {m.Contrast:F2}");
+            }
+            return string.Join("; ", parts);
+        }
+
         private void ConsumeResults()
         {
             foreach (var detection in _workerResults)
             {
+                // Solve every marker, whichever id it is. The pose is what turns an apparent
+                // size in pixels into a distance, and knowing that a second tag is 2.3 m away is
+                // exactly what makes a list of ids useful rather than trivia.
+                float size = SizeForMarker(detection.Id);
+                var pose = MarkerPoseSolver.Solve(detection.Corners, size,
+                    _workerFrame.Intrinsics);
+
+                if (_reportAllMarkers)
+                    Observe(detection, pose, size);
+
                 if (_markerId >= 0 && detection.Id != _markerId)
                 {
                     _markersSeen++;
@@ -492,8 +604,16 @@ namespace Unity.Robotics
                     continue;
                 }
 
-                var pose = MarkerPoseSolver.Solve(detection.Corners, _markerSizeMetres,
-                    _workerFrame.Intrinsics);
+                // Taken while the head was moving, so the 40 ms old frame is paired with a pose
+                // from 40 ms too late. Discarding is the whole defence: the error is a bias in
+                // the direction of travel, so keeping these and letting the median sort it out
+                // does not work - the median of eight consistently biased readings is biased.
+                if (IsHeadMoving())
+                {
+                    _markersRejected++;
+                    _rejectedForMotion++;
+                    continue;
+                }
 
                 if (!pose.Valid || pose.ReprojectionErrorPixels > _maxReprojectionErrorPixels)
                 {
@@ -558,7 +678,9 @@ namespace Unity.Robotics
 
             Debug.Log($"[XRViz] Calibration: tag at {tagPosition} -> base {basePosition}, " +
                       $"{_samplePositions.Count} readings, spread {spread * 1000f:F0} mm, " +
-                      $"tag height above base {_tagHeightAboveBase:F3} m. {how}{note}", this);
+                      $"{_rejectedForMotion} dropped for head motion, " +
+                      $"tag height above base {_tagHeightAboveBase:F3} m. {how}{note}\n" +
+                      $"  markers seen: {DescribeObservedMarkers()}", this);
         }
 
         // The robot's base pose implied by a tag lying flat on the chassis, face up.
@@ -706,6 +828,11 @@ namespace Unity.Robotics
                 tree.transform.SetPositionAndRotation(originPosition, originRotation);
             }
 
+            // Tell the origin's own indicator who moved it. Without this the label reports the
+            // move as a hand placement, which is the one thing it is there to distinguish -
+            // "did the calibration actually do anything" is asked at exactly this moment.
+            TfOriginIndicator.NotifyMoved(tree.transform, "ArUco calibration");
+
             how = "Moved the TF origin, so the scan and cloud follow the robot.";
             return true;
         }
@@ -791,11 +918,22 @@ namespace Unity.Robotics
                        $"but none decoded as a {_detectorSettings.Dictionary} tag. Check the " +
                        "printed tag came from that dictionary.";
 
+            // Before the generic "rejected all of them", because the fix is completely
+            // different: hold still rather than get closer.
+            if (_rejectedForMotion > 0 && _rejectedForMotion >= _markersRejected / 2
+                && _samplePositions.Count == 0)
+                return $"Timed out after {_searchTimeoutSeconds:F0} s - saw the tag, but " +
+                       $"{_rejectedForMotion} reading(s) were taken while the head was moving " +
+                       "and had to be dropped. The camera frame is about 40 ms old, so moving " +
+                       "while it is read biases the result. Hold still and look at the tag. " +
+                       $"Markers seen: {DescribeObservedMarkers()}";
+
             if (_markersRejected > 0 && _samplePositions.Count == 0)
                 return $"Timed out after {_searchTimeoutSeconds:F0} s - saw {_markersSeen} tag " +
                        $"reading(s) but rejected all of them. " +
                        (_markerId >= 0 ? $"Expected id {_markerId}. " : "") +
-                       "Get closer so the tag fills more of the view.";
+                       "Get closer so the tag fills more of the view. " +
+                       $"Markers seen: {DescribeObservedMarkers()}";
 
             return $"Timed out after {_searchTimeoutSeconds:F0} s with only " +
                    $"{_samplePositions.Count} good reading(s); {_minimumSamples} are needed.";
@@ -806,8 +944,18 @@ namespace Unity.Robotics
             // The mirrored count only appears once it is non-zero: it is meaningless noise on a
             // correctly oriented feed, and unmissable on a flipped one.
             string mirrored = _mirroredSeen > 0 ? $", {_mirroredSeen} MIRRORED" : "";
+
+            // Head motion is shown only while it is actually costing readings. "Hold still" is
+            // the one instruction the user can act on immediately, so it needs to be visible the
+            // moment it starts mattering and invisible the rest of the time.
+            string motion = _rejectedForMotion > 0
+                ? $" - HOLD STILL, {_rejectedForMotion} dropped for motion"
+                : "";
+
+            string markers = _observed.Count > 0 ? $"\n{DescribeObservedMarkers()}" : "";
+
             return $"{_framesExamined} frames, {_contoursSeen} outlines, {_quadsSeen} quads, " +
-                   $"{_markersSeen} tags{mirrored} ({DescribeFrameBrightness()})";
+                   $"{_markersSeen} tags{mirrored} ({DescribeFrameBrightness()}){motion}{markers}";
         }
 
         private string DescribeFrameBrightness()

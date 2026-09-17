@@ -8,6 +8,13 @@ namespace Unity.Robotics
     {
         [SerializeField] private RosSubscriberJointState _jointStateSub;
         [SerializeField] private TMP_Text _statusText;
+
+        // The same connection state in two words, drawn in the panel's header so it is on
+        // screen whichever page is open. The detailed block below lives on the ROS page only,
+        // and "is this thing even connected?" is the question you have while looking at the
+        // other five.
+        [SerializeField] private TMP_Text _headerStatus;
+
         [SerializeField] private float _refreshInterval = 0.25f;
 
         private ROSConnection _ros;
@@ -48,12 +55,26 @@ namespace Unity.Robotics
             _nextRefreshTime = Time.realtimeSinceStartup + _refreshInterval;
 
             string connection;
+            string header;
             if (!_ros.HasConnectionThread)
+            {
                 connection = "<color=#FFB300>connecting…</color>";
+                header = "<color=#FFB300>• connecting</color>";
+            }
             else if (_ros.HasConnectionError)
+            {
                 connection = "<color=#FF5252>error</color>";
+                header = "<color=#FF5252>• error</color>";
+            }
             else
+            {
                 connection = "<color=#4CAF50>ok</color>";
+                header = "<color=#4CAF50>• connected</color>";
+            }
+
+            // Always on screen, whichever page is open
+            if (_headerStatus != null)
+                _headerStatus.text = header;
 
             // LastMessageReceivedRealtime stays 0 until the first message arrives
             float lastReceived = _ros.LastMessageReceivedRealtime;
@@ -65,11 +86,13 @@ namespace Unity.Robotics
                 ? "none yet"
                 : $"{Time.realtimeSinceStartup - _lastJointStateRealtime:0.0} s ago";
 
+            // Label then value, one per line, labels muted: at arm's length through passthrough
+            // the eye finds a value by its label, not by counting words into a sentence
             _statusText.text =
-                $"ROS {_ros.RosIPAddress}:{_ros.RosPort}\n" +
-                $"Connection: {connection}\n" +
-                $"Last message: {lastReceivedText}\n" +
-                $"Joint states: {jointStateText}";
+                $"<color=#9AA5B1>Endpoint</color>  {_ros.RosIPAddress}:{_ros.RosPort}\n" +
+                $"<color=#9AA5B1>Connection</color>  {connection}\n" +
+                $"<color=#9AA5B1>Last message</color>  {lastReceivedText}\n" +
+                $"<color=#9AA5B1>Joint states</color>  {jointStateText}";
         }
 
         // A new joint state is detected by a change in the message header stamp,

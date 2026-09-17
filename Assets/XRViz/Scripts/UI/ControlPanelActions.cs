@@ -64,7 +64,7 @@ namespace Unity.Robotics
         // Flip every TF-capable visualisation between TF placement and hand placement. All-or-
         // nothing on purpose: a scene with the laser on TF and the cloud by hand is showing you
         // two different worlds at once, and this button is the "put it all back" you want when
-        // that turns out to be the case. Per-visualisation control lives in the TF Anchors panel.
+        // that turns out to be the case. Per-visualisation control lives on the panel's TF tab.
         public void ToggleTfAnchoring()
         {
             var anchors = FindAnchors();
@@ -87,6 +87,21 @@ namespace Unity.Robotics
             }
 
             SetTfAnchoring(turnOn);
+        }
+
+        // Explicit pair for the Frames page. A single button whose label flips between
+        // "Anchor: TF" and "Anchor: Manual" has to be read twice - once for the words, once to
+        // remember whether it names the state or the action - and it is the state you want at a
+        // glance while the robot is in front of you. Two buttons, each of which does exactly
+        // what it says, cost one more press of panel space and no thinking at all.
+        public void AnchorAllTf()
+        {
+            SetTfAnchoring(true);
+        }
+
+        public void AnchorAllManual()
+        {
+            SetTfAnchoring(false);
         }
 
         public void SetTfAnchoring(bool anchorToTf)
@@ -137,7 +152,7 @@ namespace Unity.Robotics
                         return $"{anchor.Label}: '{anchor.FrameId}' not in /tf";
                 }
             }
-            return "see the TF Anchors panel";
+            return "see the TF tab";
         }
 
         private static TfAnchor[] FindAnchors()
