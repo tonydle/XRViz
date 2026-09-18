@@ -27,6 +27,9 @@ public static class XRVizCreateMVPScene
         "Directional Light", k_RobotObjectName, "Robot Placement Handle",
         "ROS Control Panel", "Panel Placement Handle",
         "Laser Scan", "Laser Scan Placement Handle",
+        "RGBd Camera", "RGBd Camera Placement Handle",
+        // legacy: both were named "Point Cloud ..." before the RGBD path was renamed. Kept so
+        // regenerating over an older scene still clears the objects it made under the old names.
         "Point Cloud", "Point Cloud Placement Handle",
         "PointCloud2", "PointCloud2 Placement Handle",
         "Camera Image", "Camera Image Placement Handle",
@@ -78,8 +81,8 @@ public static class XRVizCreateMVPScene
     };
     static readonly HandleStyle k_PointCloudHandleStyle = new HandleStyle
     {
-        ObjectName = "Point Cloud Placement Handle",
-        Label = "Point cloud origin",
+        ObjectName = "RGBd Camera Placement Handle",
+        Label = "RGBd Camera origin",
         Color = new Color(0.35f, 0.90f, 0.45f), // green
     };
     // White and a size up from the rest, because this one isn't a peer of the others: it is the
@@ -225,8 +228,11 @@ public static class XRVizCreateMVPScene
         // correctly. Starts on the robot's base, since that is where the fixed frame of an arm rig
         // physically is - align it with the real robot's base and the rest follows from /tf.
         //
-        // Its handle sits on the opposite top corner of the trolley from the robot's, so the two
-        // are never confused for each other by position alone (they differ by colour and size too).
+        // Its handle sits ON it, unlike every other handle in the scene. This one's whole job is
+        // lining the fixed frame up with the real room, and a sphere floating a metre up and
+        // diagonally across the trolley cannot be lined up against anything - it also reads as
+        // belonging to some other object entirely. The robot's handle is the one out on the
+        // trolley corner, so the two are still never in the same place.
         var tfOriginGo = new GameObject("TF Origin");
         tfOriginGo.transform.SetPositionAndRotation(k_RobotBasePosition, Quaternion.identity);
         tfOriginGo.AddComponent<RosTfTree>();
@@ -234,11 +240,16 @@ public static class XRVizCreateMVPScene
         // The bars say where the fixed frame is; this says what it IS - and whether /tf is
         // arriving into it, how many visualisations are placed from it, and when something
         // (the ArUco calibration, most importantly) has just moved it.
-        tfOriginGo.AddComponent<TfOriginIndicator>();
+        var tfIndicator = tfOriginGo.AddComponent<TfOriginIndicator>();
+        var tfIndicatorSo = new SerializedObject(tfIndicator);
+        // Not permanent: B on the right controller brings the card up when the question comes up
+        tfIndicatorSo.FindProperty("_showLabel").boolValue = false;
+        tfIndicatorSo.FindProperty("_toggleButton").intValue = (int)OVRInput.Button.Two;
+        tfIndicatorSo.FindProperty("_toggleController").intValue = (int)OVRInput.Controller.RTouch;
+        tfIndicatorSo.ApplyModifiedPropertiesWithoutUndo();
 
-        var tfHandleOffset = new Vector3(0.395f, 1.125f, 0.405f);
-        CreatePlacementHandle(k_TfOriginHandleStyle, k_RobotBasePosition + tfHandleOffset,
-            0.05f, target: tfOriginGo.transform, articulationBody: null, offset: -tfHandleOffset);
+        CreatePlacementHandle(k_TfOriginHandleStyle, tfOriginGo.transform.position,
+            0.05f, target: tfOriginGo.transform, articulationBody: null, offset: Vector3.zero);
 
         // The robot's own base link is a TF frame like any other, so the robot can be placed from
         // /tf too - which is what makes a mobile base (odom -> base_link) move in the room rather
@@ -284,17 +295,20 @@ public static class XRVizCreateMVPScene
         var cloudLookDir = (k_RobotBasePosition + new Vector3(0f, 1.1f, 0f)) - cloudPosition;
         cloudLookDir.y = 0f;
         var cloudRotation = Quaternion.LookRotation(cloudLookDir, Vector3.up);
-        var cloudGo = new GameObject("Point Cloud");
+        var cloudGo = new GameObject("RGBd Camera");
         cloudGo.transform.SetPositionAndRotation(cloudPosition, cloudRotation);
 
         // Raw sensor_msgs/Image on child objects rather than three components stacked on the
         // cloud root: two of them are the same type, and in the Inspector (and in the topic
-        // browser's target list) "Color Image" and "Depth Image" are the only thing that tells
-        // them apart at a glance. No default topic - see the note on the laser scan above.
-        var colorSub = CreateImageSubscriber(cloudGo.transform, "Color Image", "");
-        var depthSub = CreateImageSubscriber(cloudGo.transform, "Depth Image", "");
+        // browser's target list, which labels every binding by its GameObject name) the name is
+        // the only thing that tells them apart at a glance. All three carry the "RGBd Camera"
+        // prefix so the browser groups them under the visualisation they feed, and so they cannot
+        // be confused with PointCloud2's single binding or the Camera Image window's.
+        // No default topic - see the note on the laser scan above.
+        var colorSub = CreateImageSubscriber(cloudGo.transform, "RGBd Camera Color", "");
+        var depthSub = CreateImageSubscriber(cloudGo.transform, "RGBd Camera Depth", "");
 
-        var infoGo = new GameObject("Depth Camera Info");
+        var infoGo = new GameObject("RGBd Camera Info");
         infoGo.transform.SetParent(cloudGo.transform, false);
         var depthInfoSub = infoGo.AddComponent<RosSubscriberCameraInfo>();
         var infoSo = new SerializedObject(depthInfoSub);
@@ -308,8 +322,8 @@ public static class XRVizCreateMVPScene
         cloudSo.FindProperty("_depthInfoSub").objectReferenceValue = depthInfoSub;
         var compute = AssetDatabase.LoadAssetAtPath<ComputeShader>(k_PointCloudComputePath);
         if (compute == null)
-            Debug.LogWarning($"[XRViz] Point cloud compute shader not found at {k_PointCloudComputePath}; " +
-                "assign it on the Point Cloud object by hand or the cloud will disable itself.");
+            Debug.LogWarning($"[XRViz] RGBd Camera compute shader not found at {k_PointCloudComputePath}; " +
+                "assign it on the RGBd Camera object by hand or the cloud will disable itself.");
         cloudSo.FindProperty("_computeShader").objectReferenceValue = compute;
         cloudSo.ApplyModifiedPropertiesWithoutUndo();
 
@@ -327,8 +341,8 @@ public static class XRVizCreateMVPScene
         // registered pair usually shares one optical frame, but where they differ it is the depth
         // one the geometry is actually in. That frame is right-down-forward rather than FLU, which
         // TfAnchor corrects for automatically on any *_optical_frame.
-        AddTfAnchor(cloudGo, cloudHandle, depthSub, frameId: string.Empty, label: "Point cloud");
-        AddVisibilityTarget(cloudGo, "Point Cloud");
+        AddTfAnchor(cloudGo, cloudHandle, depthSub, frameId: string.Empty, label: "RGBd Camera");
+        AddVisibilityTarget(cloudGo, "RGBd Camera");
 
         // Raw sensor_msgs/PointCloud2, drawn as a mesh of camera-facing squares. Separate from
         // the RGBD cloud above rather than a mode of it, because the two are genuinely different
@@ -388,6 +402,9 @@ public static class XRVizCreateMVPScene
         // Yaw only, which is the whole point: the window follows the handle around the room and
         // turns to face you, but stays upright. A picture tipped out of vertical is unreadable,
         // and unlike a sensor there is no reason ever to aim one.
+        // A starting offset only. ImageWindow recomputes it at Awake and on every shape change,
+        // because the window's height in metres - and so where its bottom edge is - is not known
+        // until a frame arrives and its aspect is read.
         var imageHandleOffset = new Vector3(0f, -0.3f, 0f);
         CreatePlacementHandle(k_ImageWindowHandleStyle, imagePosition + imageHandleOffset, 0.035f,
             target: imageGo.transform, articulationBody: null, offset: -imageHandleOffset,
@@ -417,6 +434,17 @@ public static class XRVizCreateMVPScene
         // the menu toggle has to keep polling for the Menu button, and the feedback line has to
         // keep expiring no matter which page is open.
         var menuToggle = panelRootGo.AddComponent<ControlPanelMenuToggle>();
+
+        // Y (left controller) hides and shows the camera image window. It goes here rather than
+        // on the window because VisibilityTarget hides by deactivating, and a deactivated object
+        // stops polling for the button that would bring it back. Same reason the Menu toggle is
+        // on this root.
+        var imageHotkey = panelRootGo.AddComponent<VisibilityHotkey>();
+        var imageHotkeySo = new SerializedObject(imageHotkey);
+        imageHotkeySo.FindProperty("_targetLabel").stringValue = "Camera Image";
+        imageHotkeySo.FindProperty("_button").intValue = (int)OVRInput.Button.Two;
+        imageHotkeySo.FindProperty("_controller").intValue = (int)OVRInput.Controller.LTouch;
+        imageHotkeySo.ApplyModifiedPropertiesWithoutUndo();
         var actions = panelRootGo.AddComponent<ControlPanelActions>();
 
         var canvasGo = new GameObject("ROS Panel", typeof(Canvas));
@@ -592,21 +620,23 @@ public static class XRVizCreateMVPScene
             "floating panel. It is not TF-placed - an image is a picture, not geometry - so it " +
             "goes wherever you drag it, and its handle is yaw-only so it stays upright. " +
             "Orientation, bgr8 vs rgb8 and mono8 are all corrected from the encoding the message " +
-            "reports, so no camera needs configuring.\n\n" +
+            "reports, so no camera needs configuring. PRESS Y on the left controller to hide or " +
+            "show it - it is the one visualisation big enough to be worth getting out of the " +
+            "way, and its grab handle goes with it.\n\n" +
 
-            "TWO POINT CLOUDS, on purpose. 'Point Cloud' (green handle) is the RGBD path: raw " +
+            "TWO POINT CLOUDS, on purpose. 'RGBd Camera' (green handle) is the RGBD path: raw " +
             "color + depth Image plus the depth CameraInfo, reconstructed on the GPU. " +
             "'PointCloud2' (violet handle) subscribes to a sensor_msgs/PointCloud2 topic directly " +
             "and draws it as a mesh, so it can be grabbed and TF-anchored like anything else. " +
-            "Use the RGBD path where you have the choice - it moves far less over the socket - " +
+            "Use the RGBd Camera path where you have the choice - it moves far less over the socket - " +
             "and PointCloud2 for a lidar or an already-fused /points topic.\n\n" +
 
-            "THE POINT CLOUD'S HANDLE IS ITS ORIGIN. The camera's optical centre sits on that green " +
+            "THE RGBd CAMERA'S HANDLE IS ITS ORIGIN. The camera's optical centre sits on that green " +
             "sphere and the cloud projects out along its +Z, so park the handle where the real " +
             "camera stands in the room and the virtual geometry lands on the real geometry. It is " +
             "the one handle that takes full rotation rather than yaw only, because a camera has to " +
             "be aimed. None of the laser scan or point cloud subscribers start with a default " +
-            "topic - pick color, depth and depth camera_info from the Topics tab before " +
+            "topic - pick 'RGBd Camera Color', 'RGBd Camera Depth' and 'RGBd Camera Info' from the Topics tab before " +
             "either visualisation has anything to draw.\n\n" +
 
             "These only work once the interactor rig exists, via Meta Building Blocks " +
@@ -616,6 +646,12 @@ public static class XRVizCreateMVPScene
             "3. [Ray Interaction] (the panel's buttons, and ray grab on the handles)\n" +
             "4. Optional: [Hand Tracking]\n" +
             "5. Run Meta > Tools > Project Setup Tool and Fix All for Android\n\n" +
+            "THE TF ORIGIN CARD names the fixed frame, says whether /tf is arriving and counts " +
+            "how many visualisations are actually placed from it. PRESS B on the right controller " +
+            "to bring it up - it is a question you ask occasionally, not a panel worth parking " +
+            "over the robot. Its white handle sits ON the origin, because aligning that frame " +
+            "with the real room is the one thing it is for.\n\n" +
+
             "DIAGNOSTICS. The 'ROS Diagnostics' object logs, every 5 s, the connection state and " +
             "one line per subscriber saying what it is bound to and what has reached it - no " +
             "topic bound / 0 messages / stale / receiving. It also connects on start (the panel's " +

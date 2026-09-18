@@ -26,7 +26,17 @@ namespace Unity.Robotics
 
         [Tooltip("Height of the window in metres. Width follows the image's own aspect ratio, so " +
                  "a 4:3 and a 16:9 camera both fill this height and differ in width.")]
-        [SerializeField] private float _heightMetres = 0.45f;
+        [SerializeField] private float _heightMetres = 0.32f;
+
+        [Tooltip("Aspect assumed before the first frame arrives. Without one the window would " +
+                 "sit at whatever localScale the scene authored - a full 1 m quad from the " +
+                 "generator - until a camera happened to be picked.")]
+        [SerializeField] private float _placeholderAspect = 4f / 3f;
+
+        [Tooltip("Air between the bottom of the window and the top of its grab handle, in " +
+                 "metres. The handle is repositioned from the window's actual size, so this is " +
+                 "the only part of the gap that stays fixed.")]
+        [SerializeField] private float _handleClearance = 0.045f;
 
         [Tooltip("Blank the window when nothing has arrived for this long. A frozen frame looks " +
                  "exactly like a live one. 0 keeps the last frame indefinitely.")]
@@ -56,6 +66,15 @@ namespace Unity.Robotics
         private Material _materialInstance;
         private Transform _backing;
         private TextMeshProUGUI _caption;
+
+        // Caption placement, shared by LateUpdate (which positions it) and the handle maths
+        // (which has to clear it). The Y is in the quad's local units, so it scales with the
+        // window; the height is in metres and does not, being un-scaled in LateUpdate.
+        private const float k_CaptionLocalY = 0.56f;
+        private const float k_CaptionHeightMetres = 0.036f;
+
+        private PlacementHandle _handle;
+        private bool _handleResolved;
 
         private int _appliedWidth = -1;
         private int _appliedHeight = -1;
@@ -103,6 +122,12 @@ namespace Unity.Robotics
             BuildBacking();
             if (_showCaption)
                 BuildCaption();
+
+            // Size it before anything is subscribed. The scene authors this quad at scale 1, and
+            // a 1 m quad with a backing 6% larger again is not just oversized - it swallows the
+            // grab handle hanging below it, which is why the handle reads as unpointable until a
+            // camera is picked.
+            ApplyGeometry(_placeholderAspect);
 
             SetBlank(true);
         }
@@ -165,17 +190,7 @@ namespace Unity.Robotics
         private void ApplyShape(Texture texture, int width, int height, string encoding)
         {
             if (width > 0 && height > 0)
-            {
-                float aspect = width / (float)height;
-                transform.localScale = new Vector3(_heightMetres * aspect, _heightMetres, 1f);
-                if (_backing != null)
-                {
-                    // A hair larger, and a hair behind, so it reads as a frame rather than
-                    // z-fighting with the picture
-                    _backing.localScale = new Vector3(1.04f, 1.06f, 1f);
-                    _backing.localPosition = new Vector3(0f, 0f, 0.002f);
-                }
-            }
+                ApplyGeometry(width / (float)height);
 
             bool mono = texture is Texture2D t2d &&
                 (t2d.format == TextureFormat.R8 || t2d.format == TextureFormat.R16 ||
@@ -185,6 +200,73 @@ namespace Unity.Robotics
             _materialInstance.SetFloat("_Bgr", !mono && _imageSub.IsBgr() ? 1f : 0f);
             _materialInstance.SetFloat("_FlipY", 1f);
             _materialInstance.SetFloat("_Gain", Mathf.Max(1f, _gain));
+        }
+
+        // Width from the aspect, height from _heightMetres, and the handle moved to suit. Split
+        // out of ApplyShape so Awake can run it with a placeholder aspect before any frame has
+        // arrived.
+        private void ApplyGeometry(float aspect)
+        {
+            if (!(aspect > 0f))
+                aspect = 4f / 3f;
+
+            transform.localScale = new Vector3(_heightMetres * aspect, _heightMetres, 1f);
+            if (_backing != null)
+            {
+                // A hair larger, and a hair behind, so it reads as a frame rather than
+                // z-fighting with the picture
+                _backing.localScale = new Vector3(1.04f, 1.06f, 1f);
+                _backing.localPosition = new Vector3(0f, 0f, 0.002f);
+            }
+
+            PositionHandle();
+        }
+
+        // Keep the grab sphere below everything this window draws. The serialized offset the
+        // generator writes is a single distance, correct for one window size only: at the 1 m
+        // placeholder it left the handle buried inside the backing, where it is both invisible
+        // and - the ray landing on whatever is in front - effectively unpointable. The window
+        // knows its own extent, so it places the handle rather than the other way round.
+        private void PositionHandle()
+        {
+            var handle = ResolveHandle();
+            if (handle == null)
+                return;
+
+            // The backing is 1.06x the quad, so it hangs 0.53 of the height below centre. The
+            // caption hangs lower still when it is on, and does not scale with the window.
+            float drop = _heightMetres * 0.53f;
+            if (_caption != null)
+                drop = Mathf.Max(drop, _heightMetres * k_CaptionLocalY + k_CaptionHeightMetres * 0.5f);
+
+            // The sphere is placed by its centre, so its own radius is part of the gap
+            Vector3 handleScale = handle.transform.lossyScale;
+            drop += Mathf.Max(handleScale.x, handleScale.y) * 0.5f + Mathf.Max(0f, _handleClearance);
+
+            // _offset is the target measured from the handle, so the window sits above it
+            handle.SetOffset(new Vector3(0f, drop, 0f));
+        }
+
+        // The handle is a separate root object - it has to be, or moving it would move itself -
+        // so it is found by what it points at. Searched once: a scene has a handful of handles
+        // and this runs on every shape change.
+        private PlacementHandle ResolveHandle()
+        {
+            if (_handleResolved)
+                return _handle;
+
+            _handleResolved = true;
+            var handles = FindObjectsByType<PlacementHandle>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var candidate in handles)
+            {
+                if (candidate.Target == transform)
+                {
+                    _handle = candidate;
+                    break;
+                }
+            }
+            return _handle;
         }
 
         private void SetBlank(bool blank)
@@ -276,7 +358,7 @@ namespace Unity.Robotics
             float sx = Mathf.Approximately(lossy.x, 0f) ? 1f : 1f / lossy.x;
             float sy = Mathf.Approximately(lossy.y, 0f) ? 1f : 1f / lossy.y;
             _caption.transform.parent.localScale = new Vector3(0.0006f * sx, 0.0006f * sy, 1f);
-            _caption.transform.parent.localPosition = new Vector3(0f, -0.56f, 0f);
+            _caption.transform.parent.localPosition = new Vector3(0f, -k_CaptionLocalY, 0f);
         }
 
         private void RenderCaption()

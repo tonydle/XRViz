@@ -34,8 +34,8 @@ XRViz layer only adds the ROS side.
      trolley's top-front-left corner, already grab-enabled (see "Moving things around" below)
    - a **Laser Scan** object (`RosSubscriberLaserScan` + `LaserScanVisualizer`, no default
      topic — pick one from the Topics browser) with its own magenta **Laser Scan Placement Handle**
-   - a **Point Cloud** object (`DepthImagePointCloud` + colour/depth `RosSubscriberImage` and a
-     `RosSubscriberCameraInfo` on named children) with a green **Point Cloud Placement Handle**
+   - an **RGBd Camera** object (`DepthImagePointCloud` + colour/depth `RosSubscriberImage` and a
+     `RosSubscriberCameraInfo` on named children) with a green **RGBd Camera Placement Handle**
      that *is* the cloud's origin — see "RGBD point cloud" below
    - a world-space **ROS Control Panel** group holding one canvas: a rail of tabs
      (**ROS** / **Topics** / **TF** / **Scene** / **Calibrate** / **Guide**) down the left and
@@ -121,7 +121,7 @@ the full name of the page you are on, so the rail stays narrow without the tabs 
   connected?" is the question you have while looking at the other five pages.
 - **The footer feedback line.** `ControlPanelActions` writes a one-line confirmation of the last
   press for a couple of seconds ("cleared 2 visualisations", "reset 4 anchors", "TF on, but no
-  frame resolved — Point cloud: no message yet"). Without it, pressing **Clear Data** with
+  frame resolved — RGBd Camera: no message yet"). Without it, pressing **Clear Data** with
   nothing to clear is indistinguishable from a dead button — which, on a ray-driven UI where a
   near-miss produces exactly nothing, is a real failure mode. It lives on the group root, which
   stays active while the panel is hidden, so it keeps expiring either way.
@@ -274,9 +274,9 @@ Generated child objects — none start subscribed to anything:
 
 | Child object | Type |
 | --- | --- |
-| `Color Image` | `sensor_msgs/Image` |
-| `Depth Image` | `sensor_msgs/Image` |
-| `Depth Camera Info` | `sensor_msgs/CameraInfo` |
+| `RGBd Camera Color` | `sensor_msgs/Image` |
+| `RGBd Camera Depth` | `sensor_msgs/Image` |
+| `RGBd Camera Info` | `sensor_msgs/CameraInfo` |
 
 All three are targeted from the Topics browser, which only ever lists topics the endpoint is
 actually advertising — they appear in its ◀ ▶ list by GameObject name, which is why the two
@@ -425,6 +425,28 @@ which it is "correct" — so it goes where you want to look at it and has a hand
 stays upright; a picture tipped out of vertical is unreadable, and unlike a sensor there is never
 a reason to aim one.
 
+**Y on the left controller hides and shows it** (`VisibilityHotkey`, polling `OVRInput.Button.Two`
+on `LTouch` — `Two` is Y there, and `Start`, the Menu button, is already the panel's). The grab
+handle is suspended with it, so hiding does not leave a yellow sphere floating with nothing on the
+end of it. The component sits on the **`ROS Control Panel` root, not on the window**, and it has to:
+`VisibilityTarget` hides by deactivating its GameObject, and a deactivated object's `Update` never
+runs — a window that hid itself could never hear the button that brings it back. The panel's
+**Scene** tab toggles the same `VisibilityTarget`, so the two stay in agreement.
+
+**The window sizes itself, and the handle follows.** `_heightMetres` (0.32 m) sets the height; the
+width comes from the image's own aspect. Two things that used to go wrong here:
+
+- The quad is authored at scale 1 and was only resized when a frame arrived, so before a topic was
+  picked the window was a **1 m × 1 m slab** with a backing 6% larger again. `ApplyGeometry` now
+  runs at `Awake` against `_placeholderAspect`, so it is never bigger than `_heightMetres` says.
+- The handle's offset was a fixed 0.3 m drop serialized by the generator — right for one window
+  size only. Against the 1 m placeholder the sphere sat *inside* the backing (which spanned 0.53 m
+  either side of centre), where it is invisible and the ray lands on the panel in front of it.
+  That is what "the anchor cannot be grabbed" looks like. `ImageWindow.PositionHandle` now computes
+  the drop from the window's actual extent — backing or caption underside, whichever hangs lower,
+  plus the sphere's radius and `_handleClearance` — and pushes it through `PlacementHandle.SetOffset`
+  on every shape change.
+
 Everything about how it draws comes from the message's own `encoding`, so no camera needs
 configuring. `Shaders/ImageUnlit.shader` handles the four things that each look like a broken
 camera rather than a wrong setting:
@@ -463,10 +485,10 @@ Seven spheres, ~3–5 cm, colour-coded, with a matching key on the panel's **Gui
 | Robot Placement Handle | amber | the UR3e (via `ArticulationBody.TeleportRoot`) |
 | Panel Placement Handle | cyan | the whole ROS Control Panel group |
 | Laser Scan Placement Handle | magenta | the laser scan visualisation |
-| Point Cloud Placement Handle | green | the RGBD cloud's **origin** — see "RGBD point cloud" |
+| RGBd Camera Placement Handle | green | the RGBD cloud's **origin** — see "RGBD point cloud" |
 | PointCloud2 Placement Handle | violet | the raw `PointCloud2` cloud — see "Raw PointCloud2" |
-| Camera Image Placement Handle | yellow | the floating image window — yaw-only, so it stays upright |
-| TF Origin Placement Handle | white, a size up | the **fixed frame** — the origin of the whole TF world |
+| Camera Image Placement Handle | yellow | the floating image window — yaw-only, so it stays upright; hidden with the window on **Y** |
+| TF Origin Placement Handle | white, a size up | the **fixed frame** — the origin of the whole TF world; sits *on* the origin, not offset from it |
 
 Spheres rather than cubes because a cube's silhouette changes with viewing angle — at this size
 it reads as a different object depending on where you stand. Amber/cyan/magenta rather than
@@ -546,9 +568,13 @@ laser's frame, the cloud at the camera's, the model on the real arm. It is the s
 that places everything else — which is the entire point of the mode.
 
 The frame itself is drawn as a 15 cm **axis triad** (red/green/blue = ROS x/y/z, RViz's colours,
-along the ROS axes rather than Unity's) because that is the thing you are actually aligning — the
-handle is a grip and sits a metre above it, on the opposite trolley corner from the robot's amber
-one. Line the triad up with the real base, not the sphere.
+along the ROS axes rather than Unity's). **The white handle sits on the origin**, alone among the
+handles in this scene — every other one is offset from what it carries so the grip does not cover
+the thing it moves. This one is not, because aligning the fixed frame *is* the job: a sphere a
+metre up and diagonally across the trolley (where it used to sit, at offset
+`0.395, 1.125, 0.405`) cannot be lined up against a real robot base, and reads as belonging to
+some other object. Grab the sphere, put it on the real base, and the triad is already there. The
+robot's amber handle is still out on the trolley corner, so the two are never in the same place.
 
 ### The TF origin's label
 
@@ -569,6 +595,15 @@ The move line exists because a calibration that worked and one that silently did
 identical the moment after the button press — `ArucoRobotCalibrator.ApplyToTfOrigin` calls
 `TfOriginIndicator.NotifyMoved` so the card can name the cause, and a hand drag of the white
 handle is reported as `moved by hand` instead.
+
+**B on the right controller shows and hides it, and it starts hidden** (`_toggleButton` /
+`_toggleController`, defaulting to `OVRInput.Button.Two` on `RTouch`). What the fixed frame is
+doing is a question you ask occasionally — mid-calibration, or when anchored data lands somewhere
+impossible — not one worth a card permanently parked over the robot. Unlike `VisibilityHotkey`,
+which has to live on the control panel root because `VisibilityTarget` hides by deactivating, this
+polls for its own button: hiding the card deactivates only the label child, so the component keeps
+running and can hear the press that brings it back. `_showLabel` in the Inspector is the same
+toggle, for a desk run with no controller in hand.
 
 Everything it draws is built at runtime, so dropping the component on the TF Origin object is the
 whole installation — no prefab, no wiring, and no need to re-run the scene generator. It builds

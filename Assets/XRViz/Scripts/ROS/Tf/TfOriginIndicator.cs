@@ -28,8 +28,17 @@ namespace Unity.Robotics
     [DefaultExecutionOrder(100)]
     public class TfOriginIndicator : MonoBehaviour
     {
-        [Tooltip("Draw the floating label. The axis bars are unaffected.")]
-        [SerializeField] private bool _showLabel = true;
+        [Tooltip("Draw the floating label from the start. Off by default: what the fixed frame " +
+                 "is doing is a question you ask occasionally, not one worth a card permanently " +
+                 "parked over the robot. The axis bars are unaffected either way.")]
+        [SerializeField] private bool _showLabel = false;
+
+        [Tooltip("Controller button that shows and hides the card. B on the right controller by " +
+                 "default - Y on the left already hides the camera image window, and Start (the " +
+                 "Menu button) is the control panel's. None disables the binding.")]
+        [SerializeField] private OVRInput.Button _toggleButton = OVRInput.Button.Two;
+
+        [SerializeField] private OVRInput.Controller _toggleController = OVRInput.Controller.RTouch;
 
         [Tooltip("How far above the origin the label floats, in metres. Measured along world up, " +
                  "not the origin's own up, so the label stays overhead after a calibration " +
@@ -126,6 +135,16 @@ namespace Unity.Robotics
 
             BuildLabel();
             SetLabelVisible(_showLabel);
+        }
+
+        // Polled here on the indicator itself, which VisibilityHotkey cannot do for the things
+        // it toggles: hiding this card deactivates only the label child, so this component keeps
+        // running and can still hear the button that brings the card back.
+        private void Update()
+        {
+            if (_toggleButton != OVRInput.Button.None &&
+                OVRInput.GetDown(_toggleButton, _toggleController))
+                ToggleLabel();
         }
 
         private void LateUpdate()

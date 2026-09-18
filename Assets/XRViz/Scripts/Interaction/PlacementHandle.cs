@@ -108,6 +108,20 @@ namespace Unity.Robotics
                 gameObject.SetActive(!suspended);
         }
 
+        // Move the grip relative to whatever it carries. For a visualisation whose size isn't
+        // known until the first message arrives - ImageWindow, whose window is sized from the
+        // image's own aspect - a serialized offset cannot be right: the handle has to stay clear
+        // of an edge that moves. Re-homes rather than writing, because it is the handle that is
+        // now in the wrong place, not the target.
+        public void SetOffset(Vector3 offset)
+        {
+            if ((_offset - offset).sqrMagnitude < 1e-10f)
+                return;
+
+            _offset = offset;
+            SnapToTarget();
+        }
+
         // Place the target directly, ignoring the handle's own pose and offset. For a driver that
         // knows the pose it wants (TfAnchor) rather than one moving a grip about.
         public void SetTargetPose(Vector3 position, Quaternion rotation)
