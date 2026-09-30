@@ -19,6 +19,13 @@ namespace Unity.Robotics
             _target = gameObject;
         }
 
+        // Renaming a copy. Two rows both reading "Camera Image" in the Scene list are worse than
+        // useless - the whole reason to have several is to tell them apart.
+        public void SetLabel(string label)
+        {
+            _label = label;
+        }
+
         public void SetVisible(bool visible)
         {
             if (_target != null)

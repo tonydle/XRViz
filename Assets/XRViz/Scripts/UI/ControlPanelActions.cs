@@ -183,7 +183,10 @@ namespace Unity.Robotics
             return n == 1 ? $"1 {noun}" : $"{n} {noun}s";
         }
 
-        private void ShowFeedback(string message)
+        // Public because the footer is the panel's one place for "what that press did", and the
+        // pages that act on the scene through some other component (the Views page, through
+        // VisualizationSpawner) have nowhere else to say it.
+        public void ShowFeedback(string message)
         {
             if (_feedback == null)
                 return;

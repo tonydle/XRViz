@@ -248,14 +248,15 @@ namespace Unity.Robotics
         }
 
         // The handle is a separate root object - it has to be, or moving it would move itself -
-        // so it is found by what it points at. Searched once: a scene has a handful of handles
-        // and this runs on every shape change.
+        // so it is found by what it points at. Only a SUCCESSFUL find is cached: a window created
+        // at runtime (the Views tab's copies) is built before its handle is pointed at it, so a
+        // failure here has to stay retryable or the copy would keep its handle clearance forever
+        // at the placeholder size. Shape changes are rare enough for the search to be free.
         private PlacementHandle ResolveHandle()
         {
-            if (_handleResolved)
+            if (_handleResolved && _handle != null)
                 return _handle;
 
-            _handleResolved = true;
             var handles = FindObjectsByType<PlacementHandle>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var candidate in handles)
@@ -263,6 +264,7 @@ namespace Unity.Robotics
                 if (candidate.Target == transform)
                 {
                     _handle = candidate;
+                    _handleResolved = true;
                     break;
                 }
             }

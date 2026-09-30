@@ -38,7 +38,7 @@ XRViz layer only adds the ROS side.
      `RosSubscriberCameraInfo` on named children) with a green **RGBd Camera Placement Handle**
      that *is* the cloud's origin — see "RGBD point cloud" below
    - a world-space **ROS Control Panel** group holding one canvas: a rail of tabs
-     (**ROS** / **Topics** / **TF** / **Scene** / **Calibrate** / **Guide**) down the left and
+     (**ROS** / **Topics** / **Views** / **TF** / **Scene** / **Calibrate** / **Guide**) down the left and
      one page at a time on the right, with the live connection state in the header and a
      feedback line in the footer (`ControlPanelTabs`, `RosConnectionStatusUI`,
      `ControlPanelActions`). All ray-enabled — see "The ROS control panel" below
@@ -79,7 +79,8 @@ press did. 62 × 66 cm in the room.
 | Tab | Page |
 | --- | --- |
 | **ROS** | connect, disconnect, and the endpoint address — the only page that matters until it reads connected |
-| **Topics** | ask the endpoint what it is advertising and re-point a subscriber at another topic |
+| **Topics** | ask the endpoint what it is advertising, re-point a subscriber at another topic, or detach it from the one it is on |
+| **Views** | how many of each visualisation the scene has — a `-`, a count and a `+` per kind |
 | **TF** | per-visualisation `/tf` or hand placement, with the frame each one is using |
 | **Scene** | show/hide each visualisation, **Clear Data**, **Reset Layout** |
 | **Calibrate** | the chassis-tag calibration (Android only) |
@@ -188,8 +189,19 @@ How it works:
 - The list comes from `ROSConnection.GetTopicAndTypeList()`, which sends the `__topic_list`
   system command to `ros_tcp_endpoint`. The reply is dispatched from `ROSConnection.Update()`,
   so `TopicBrowserUI` handles it on the main thread and writes straight to the UI.
-- **◀ ▶ at the top picks which subscriber you are retargeting** — joint states or laser scan in
-  the generated scene. The label shows its message type and current topic.
+- **◀ ▶ at the top picks which subscriber you are retargeting** — joint states, laser scan,
+  the RGBD camera's colour/depth/info, the PointCloud2, the camera window, and one entry per copy
+  you have made on the **Views** tab. The label shows its message type and current topic.
+- **The target list is found, not serialized.** `TopicBrowserUI` sweeps the scene for
+  `IRosTopicBinding` every time the tab is opened and sorts by hierarchy path, so a camera window
+  added on the Views tab a moment ago is in the list, grouped under its own name
+  (`Camera Image 2 Source`). The selection follows the *subscriber*, not its index, so adding a
+  view does not silently move you onto a different one.
+- **The red ✕ detaches the selected subscriber from its topic.** `SetTopic("")` — it
+  unsubscribes from the endpoint, nothing more arrives over the socket for it, and it is left in
+  exactly the state every visualisation starts in, so re-picking a topic brings it back. Use it
+  on a camera you are not looking at: a bound subscriber costs bandwidth whether or not anything
+  is drawing it.
 - **It is filtered by that target's message type.** Only matching topics are listed; the status
   line shows `3 of 47 topics match`. Subscribing to a mismatched type just produces
   deserialization errors, so the filter is on by default — **tick** `Show All Types` on the
@@ -214,8 +226,76 @@ How it works:
 Paged with **Prev**/**Next** (7 rows a page) rather than scrolled — a `ScrollRect` is fussy to
 drag accurately with a ray, and fixed rows need no viewport mask or layout group.
 
-To point a *different* subscriber at a topic this way, have it extend `RosSubscriber<T>`
-(which implements `IRosTopicBinding`) and add it to the browser's `_targets` array.
+To point a *different* subscriber at a topic this way, have it extend `RosSubscriber<T>`, which
+implements `IRosTopicBinding`. That is all: the browser finds it. There is no `_targets` array
+any more - a serialized list could not name the copies the Views tab makes at runtime.
+
+
+## Several of the same visualisation
+
+The **Views** tab has one row per kind — laser scan, RGBd camera, PointCloud2, camera image —
+with the count between a `-` and a `+`. Press `+` and a second one appears in the room; give it
+its own topic on the **Topics** tab. Two camera windows on two different cameras, three point
+clouds from three sensors, all at once.
+
+The robot has no row. There is one robot: a second would subscribe to a second `/joint_states`
+and stand in the room beside the first, and the arm the chassis calibration snaps onto has to be
+unambiguous.
+
+### What a copy is
+
+A whole visualisation, not a second renderer: its own subscribers, its own grab handle in the
+same colour as the original's, its own `TfAnchor`, and its own row on the **TF** and **Scene**
+tabs. `VisualizationSpawner` makes it by `Instantiate`-ing the scene's own instance rather than a
+prefab — the generator already builds exactly one correctly wired example of each kind, and a
+prefab would be a second definition of the same thing for the two to drift apart from.
+
+Three things `Instantiate` cannot get right, which the spawner fixes:
+
+- **The grab handle is a separate root object** (it has to be — a handle parented under what it
+  moves would move itself), so its reference to the visualisation points *outside* the copied
+  hierarchy and is not remapped. Left alone, the new sphere drags the old cloud. The copy's handle
+  is cloned too, re-pointed with `PlacementHandle.SetTarget`, and the copy's `TfAnchor` is pointed
+  at that handle instead of the original's.
+- **Names and labels are duplicated.** Three rows all reading `RGBd Camera Depth` is the same as
+  no rows at all. The copy and its children are renamed by prefix (`RGBd Camera 2 Depth`), which
+  works because the generator names a visualisation's subscriber children after the visualisation.
+- **The topic would come with it.** Copies start with *no* topic, exactly like the generated
+  scene does. Otherwise every press would produce another window showing the same camera, and
+  two subscribers on one topic by accident rather than on purpose.
+
+### The floor is one
+
+The count includes the scene's own instance and `-` stops at 1: that instance is the template
+every copy is made from, so destroying it would leave nothing to copy and no way back. To get rid
+of the last one, hide it on the **Scene** tab or detach its topic with the Topics tab's ✕ —
+both recoverable, neither destructive.
+
+`-` removes the newest copy and its handle. Destroying the copy is what detaches it from ROS:
+`RosSubscriber` unsubscribes in `OnDestroy`.
+
+### Two subscribers on one topic
+
+Deliberately sharing a topic is now an ordinary thing to do, and it used to be a trap.
+`ROSConnection.Unsubscribe(topic)` removes **every** callback registered on that topic, not just
+the caller's — so retargeting or closing one of two windows on the same camera silently killed
+the other, which then sat there still "bound", counting zero messages, indistinguishable from a
+camera that had stopped publishing.
+
+`RosSubscriberRegistry` closes it: every subscriber that has run `Start` is in a static list, and
+both paths out of `Unsubscribe` — `SetTopic` and `OnDestroy` — call `RestoreOthers`, which
+re-registers anyone else still bound to the topic just dropped. It logs when it does, because
+"that press silently broke this other thing" is worth seeing once.
+
+The panel says so too: detaching reports `detached from /x · 2 other subscriber(s) still on it`,
+because "did closing this one kill the other" is exactly the question that follows.
+
+### The lists page
+
+The **TF** and **Scene** tabs page now (`◀ 1 / 3 ▶` beside the status line). They used to show a
+fixed six rows, which was fine when the scene had a fixed handful of visualisations; a copy that
+had scrolled off a list with no way to reach it could not be flipped back to manual placement
+when TF put it somewhere wrong. Both sort by label so the rows do not reshuffle between openings.
 
 ## Visualising sensor topics
 

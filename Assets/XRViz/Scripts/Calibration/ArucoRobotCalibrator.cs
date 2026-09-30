@@ -46,15 +46,19 @@ namespace Unity.Robotics
             // chassis, which is the number nobody has to hand.
             KeepRobotHeight,
 
-            // Place the base below the tag by Tag Height Above Base. Correct if that number is
-            // measured; a robot floating by the tag's height if it was left at zero.
+            // Place the origin below the tag by Tag Height Above Origin. Correct if that
+            // number is measured; everything floating by the tag's height if left at zero.
             FromTagHeight,
         }
 
         public enum ApplyMode
         {
-            // Move whichever thing actually owns the robot's pose: the TF origin when the robot
-            // is anchored to TF, the robot itself when it is placed by hand
+            // Move the TF origin wherever there is one, and the robot only in a scene with no
+            // TF world to place. The tag is a measurement of where the fixed frame is in this
+            // room, so that is what it should write to - whether or not the robot happens to be
+            // anchored to TF at the time. A robot that is anchored then follows through /tf; one
+            // that is not stays where the user put it, which is the correct answer and not a
+            // failure: the calibration never drops the robot onto the tag.
             Auto,
             MoveRobot,
             MoveTfOrigin,
@@ -92,19 +96,27 @@ namespace Unity.Robotics
                  "against. Costs a pose solve per extra marker per pass, which is nothing.")]
         [SerializeField] private bool _reportAllMarkers = true;
 
-        [Header("Where the tag is on the robot")]
-        [Tooltip("Height of the tag above the robot's base frame, in metres. The tag is assumed " +
-                 "to lie flat on the chassis top, printed face up, centred over the base column.")]
-        [SerializeField] private float _tagHeightAboveBase = 0.0f;
+        // Both of these are measured from the frame the calibration PLACES, which is the TF
+        // origin whenever TF owns the robot's pose (the normal case) and the robot's own root
+        // only when the robot is placed by hand. The tag is the one measurement of where the
+        // fixed frame is in this room; every other frame - base_link included - is then
+        // populated from /tf underneath it, so nothing here is measured from base_link.
+        [Header("Where the tag is, relative to what gets placed")]
+        [Tooltip("Height of the tag above the placed frame - the TF origin when TF owns the " +
+                 "robot, the robot's own root otherwise - in metres. Unused in Keep Robot " +
+                 "Height, which is the default.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("_tagHeightAboveBase")]
+        [SerializeField] private float _tagHeightAboveOrigin = 0.0f;
 
-        [Tooltip("Horizontal offset from the base frame to the tag centre, in the robot's own " +
-                 "frame: x to the robot's right, y along the robot's forward. Leave at zero when " +
-                 "the tag really is centred on the column.")]
+        [Tooltip("Horizontal offset from the placed frame to the tag centre, in that frame's " +
+                 "own axes: x to its right, y along its forward. Leave at zero when the tag " +
+                 "really is over the origin.")]
         [SerializeField] private Vector2 _tagPlanarOffset = Vector2.zero;
 
-        [Tooltip("Rotation about the tag's normal from 'the top of the printed tag' to 'the " +
-                 "direction the robot faces', in degrees. Print the tag with its top pointing " +
-                 "the way the robot faces and this stays at zero.")]
+        [Tooltip("Rotation about the tag's normal from 'the top of the printed tag' to the " +
+                 "forward of the placed frame (ROS +X of the fixed frame, when the TF origin is " +
+                 "what moves), in degrees. Print the tag with its top pointing the way the " +
+                 "robot faces and this stays at zero.")]
         [SerializeField] private float _tagYawOffsetDegrees = 0f;
 
         [Tooltip("How the robot's height is decided. Keep Robot Height takes only horizontal " +
@@ -130,12 +142,8 @@ namespace Unity.Robotics
         [SerializeField] private PlacementHandle _robotHandle;
 
         [Tooltip("The robot's TF anchor, if it has one. Read to decide what owns the robot's " +
-                 "pose, and to name the frame the robot's base is published as.")]
+                 "pose: anchored to TF, the TF origin is what the calibration moves.")]
         [SerializeField] private TfAnchor _robotAnchor;
-
-        [Tooltip("Frame the robot's base is published as. Used when moving the TF origin; " +
-                 "defaults to the TF anchor's frame when left empty.")]
-        [SerializeField] private string _robotBaseFrame = "base_link";
 
         [Header("Search")]
         [SerializeField] private float _searchTimeoutSeconds = 10f;
@@ -315,13 +323,6 @@ namespace Unity.Robotics
                 State = CalibrationState.Idle;
                 StatusMessage = "";
             }
-        }
-
-        // Whatever actually carries the robot's pose. Used to read the robot's current height,
-        // which is the point of KeepRobotHeight.
-        private Transform RobotTransform()
-        {
-            return _robotHandle != null ? _robotHandle.Target : null;
         }
 
         // Thumbstick trim while the proposal is on screen. This is the honest place for a manual
@@ -636,12 +637,12 @@ namespace Unity.Robotics
             Vector3 tagPosition = MedianPosition(_samplePositions);
             Quaternion tagRotation = AverageRotation(_sampleRotations);
 
-            ComputeRobotPose(tagPosition, tagRotation, out Vector3 basePosition,
-                out Quaternion baseRotation);
+            ComputePlacedPose(tagPosition, tagRotation, out Vector3 placedPosition,
+                out Quaternion placedRotation);
 
             _gizmo?.Show(tagPosition, tagRotation, _markerSizeMetres);
 
-            if (!Apply(basePosition, baseRotation, out string how))
+            if (!Apply(placedPosition, placedRotation, out string how))
             {
                 State = CalibrationState.TimedOut;
                 StatusMessage = how;
@@ -654,42 +655,54 @@ namespace Unity.Robotics
             // What was done about the vertical, and what to do if it is wrong. In
             // KeepRobotHeight the tag's height is not used at all, so warning about it would be
             // noise; in FromTagHeight a zero is not a plausible measurement but an unset field -
-            // the tag lies on the chassis TOP, so it is always some way above the base - and
-            // left at zero the base is placed exactly at the tag, floating the robot by however
-            // high the tag really is. That looks like a broken calibration rather than an
-            // unfilled box, so say which it is.
+            // the tag lies on the chassis TOP, so it is always some way above the fixed frame -
+            // and left at zero the fixed frame is placed exactly at the tag, lifting the whole
+            // TF world by however high the tag really is. That looks like a broken calibration
+            // rather than an unfilled box, so say which it is.
             string note;
             if (_verticalMode == VerticalMode.KeepRobotHeight)
                 note = _heightNudgeMetresPerSecond > 0f
                     ? " Height kept as it was - thumbstick up/down to trim it."
                     : " Height kept as it was.";
-            else if (Mathf.Approximately(_tagHeightAboveBase, 0f))
-                note = " NOTE: Tag Height Above Base is 0, so the base was placed AT the tag - " +
-                       "the robot will float by the tag's real height. Measure base to tag and " +
-                       "set it, or switch Vertical Mode to Keep Robot Height.";
+            else if (Mathf.Approximately(_tagHeightAboveOrigin, 0f))
+                note = " NOTE: Tag Height Above Origin is 0, so the origin was placed AT the " +
+                       "tag - everything under it will float by the tag's real height. Measure " +
+                       "origin to tag and set it, or switch Vertical Mode to Keep Robot Height.";
             else
                 note = "";
 
             State = CalibrationState.AwaitingConfirmation;
+            // Ask about the thing that actually moved. On the TF path with the robot not
+            // anchored, "does the robot line up?" has no bearing on whether the calibration was
+            // right - the origin indicator is what to look at.
+            string check = WillMoveTfOrigin()
+                ? "Is the TF origin where the tag is?"
+                : "Does the robot line up?";
             _proposalMessage = $"Tag {(_markerId >= 0 ? _markerId.ToString() : "found")} from " +
                                $"{_samplePositions.Count} readings (spread {spread * 1000f:F0} mm). " +
-                               $"{how}{note} Does the robot line up? Apply or Cancel.";
+                               $"{how}{note} {check} Apply or Cancel.";
             StatusMessage = _proposalMessage;
 
-            Debug.Log($"[XRViz] Calibration: tag at {tagPosition} -> base {basePosition}, " +
+            // placedPosition is what the TAG implies, height included. The height actually
+            // used is decided by the apply path (KeepRobotHeight leaves the moved thing's height
+            // alone), so do not read this line as the pose that landed.
+            Debug.Log($"[XRViz] Calibration: tag at {tagPosition} -> " +
+                      $"{(WillMoveTfOrigin() ? "TF origin" : "robot")} from tag {placedPosition}, " +
                       $"{_samplePositions.Count} readings, spread {spread * 1000f:F0} mm, " +
                       $"{_rejectedForMotion} dropped for head motion, " +
-                      $"tag height above base {_tagHeightAboveBase:F3} m. {how}{note}\n" +
+                      $"tag height above origin {_tagHeightAboveOrigin:F3} m. {how}{note}\n" +
                       $"  markers seen: {DescribeObservedMarkers()}", this);
         }
 
-        // The robot's base pose implied by a tag lying flat on the chassis, face up.
+        // The pose of the frame being placed, implied by a tag lying flat on the chassis, face
+        // up. That frame is the TF origin on the normal path and the robot's own root when the
+        // robot is placed by hand - the tag offsets below are read in whichever it is.
         //
         // Two physical directions come out of the tag and everything else follows from them: the
-        // tag's normal (out of its printed face) is the robot's up, and the direction the top of
-        // the print points is the robot's forward, turned by the yaw offset.
-        private void ComputeRobotPose(Vector3 tagPosition, Quaternion tagRotation,
-            out Vector3 basePosition, out Quaternion baseRotation)
+        // tag's normal (out of its printed face) is the frame's up, and the direction the top of
+        // the print points is its forward, turned by the yaw offset.
+        private void ComputePlacedPose(Vector3 tagPosition, Quaternion tagRotation,
+            out Vector3 placedPosition, out Quaternion placedRotation)
         {
             Vector3 up = tagRotation * Vector3.forward;
             Vector3 forward = tagRotation * Vector3.up;
@@ -708,40 +721,45 @@ namespace Unity.Robotics
             }
 
             forward = Quaternion.AngleAxis(_tagYawOffsetDegrees, up) * forward.normalized;
-            baseRotation = Quaternion.LookRotation(forward, up);
+            placedRotation = Quaternion.LookRotation(forward, up);
 
-            // The tag sits above the base and possibly off to one side, both measured in the
-            // robot's own frame - so the base is the tag less that offset
-            Vector3 offset = new Vector3(_tagPlanarOffset.x, _tagHeightAboveBase, _tagPlanarOffset.y);
-            basePosition = tagPosition - baseRotation * offset;
+            // The tag sits above the placed frame's origin and possibly off to one side, both
+            // measured in that frame - so the frame is the tag less that offset
+            Vector3 offset = new Vector3(_tagPlanarOffset.x, _tagHeightAboveOrigin, _tagPlanarOffset.y);
+            placedPosition = tagPosition - placedRotation * offset;
 
-            // Height from the robot rather than from the tag, when asked. The tag pins the
-            // horizontal position and the yaw, which is what it is good at; the vertical it is
-            // worst at, and it is also the axis a wrong tag height, a wrong marker size or a
-            // wrong lens offset all come out along. Leaving the robot at the height it already
-            // stands at is both more accurate and one fewer number to measure.
-            if (_verticalMode == VerticalMode.KeepRobotHeight)
-            {
-                Transform robot = RobotTransform();
-                if (robot != null)
-                    basePosition.y = robot.position.y;
-            }
-
-            basePosition.y += _heightNudge;
+            // The vertical is deliberately NOT decided here. This gives the pose the tag implies;
+            // KeepRobotHeight is applied by whoever actually does the moving, because "keep the
+            // height" means "keep the height of the thing being moved" and only they know what
+            // that is. Doing it here meant reading the robot's Transform even when the robot is
+            // not what moves.
         }
 
-        private bool Apply(Vector3 basePosition, Quaternion baseRotation, out string how)
+        // Which of the two things the tag pose is a measurement of. The tag offsets are read in
+        // the frame this names, so the decision is made in one place rather than inline.
+        //
+        // Auto goes on whether there is a TF world at all, NOT on whether the robot is currently
+        // anchored to it. Keying it off the anchor meant the common state - anchor off, because
+        // it starts off and is turned on from the TF page - sent the whole calibration down the
+        // MoveRobot path and teleported the robot onto the tag, which is the one thing the tag
+        // is not a measurement of.
+        private bool WillMoveTfOrigin()
+        {
+            ApplyMode mode = _applyMode;
+            if (mode == ApplyMode.Auto)
+                mode = RosTfTree.Instance != null ? ApplyMode.MoveTfOrigin : ApplyMode.MoveRobot;
+            return mode == ApplyMode.MoveTfOrigin;
+        }
+
+        private bool Apply(Vector3 placedPosition, Quaternion placedRotation, out string how)
         {
             how = "";
             ClearUndo();
 
             bool anchoredToTf = _robotAnchor != null && _robotAnchor.AnchorToTf;
-            ApplyMode mode = _applyMode;
-            if (mode == ApplyMode.Auto)
-                mode = anchoredToTf ? ApplyMode.MoveTfOrigin : ApplyMode.MoveRobot;
 
-            if (mode == ApplyMode.MoveTfOrigin)
-                return ApplyToTfOrigin(basePosition, baseRotation, out how);
+            if (WillMoveTfOrigin())
+                return ApplyToTfOrigin(placedPosition, placedRotation, out how);
 
             // Moving the robot itself while TF owns its pose would be undone on the next frame,
             // so hand the robot back to manual placement and say so rather than appearing to
@@ -763,8 +781,14 @@ namespace Unity.Robotics
                     return false;
                 }
 
+                // KeepRobotHeight, on the path that moves the robot: leave the robot's height
+                // alone. Here placedPosition IS this Transform's pose, so reading it is right.
+                if (_verticalMode == VerticalMode.KeepRobotHeight)
+                    placedPosition.y = target.position.y;
+                placedPosition.y += _heightNudge;
+
                 RememberTransform(target);
-                _robotHandle.SetTargetPose(basePosition, baseRotation);
+                _robotHandle.SetTargetPose(placedPosition, placedRotation);
                 _robotHandle.SnapToTarget();
                 how += " Moved the robot.";
                 return true;
@@ -781,7 +805,15 @@ namespace Unity.Robotics
         // stands for "where the robot's fixed frame is in this room" (see RosTfTree). Doing it
         // this way also drags the laser scan and the point cloud along, all still consistent with
         // each other, which is the entire reason TF placement exists.
-        private bool ApplyToTfOrigin(Vector3 basePosition, Quaternion baseRotation, out string how)
+        //
+        // The tag measures the TF ORIGIN directly - it is not a measurement of base_link that is
+        // then walked back up the tree. Composing through base_link's /tf pose is what put the
+        // origin a robot-height out: the tag offsets are measured from the frame being placed,
+        // so subtracting base_link's offset as well counted the robot's own height twice. Every
+        // other frame, base_link included, is populated from /tf once the origin is where the
+        // tag says it is - which is also why this no longer needs /tf to have arrived at all.
+        private bool ApplyToTfOrigin(Vector3 originPosition, Quaternion originRotation,
+            out string how)
         {
             how = "";
 
@@ -792,26 +824,13 @@ namespace Unity.Robotics
                 return false;
             }
 
-            string frame = !string.IsNullOrEmpty(_robotBaseFrame)
-                ? _robotBaseFrame
-                : (_robotAnchor != null ? _robotAnchor.FrameId : null);
-
-            if (string.IsNullOrEmpty(frame))
-            {
-                how = "No robot base frame is configured, so the TF origin cannot be solved for.";
-                return false;
-            }
-
-            // Where the base sits relative to the fixed frame, according to TF
-            if (!tree.TryGetPose(frame, out Vector3 localPosition, out Quaternion localRotation))
-            {
-                how = $"'{frame}' is not in /tf yet, so the TF origin cannot be placed from it.";
-                return false;
-            }
-
-            // We want origin * local = target, so origin = target * local^-1
-            Quaternion originRotation = baseRotation * Quaternion.Inverse(localRotation);
-            Vector3 originPosition = basePosition - originRotation * localPosition;
+            // KeepRobotHeight, on the path that moves the fixed frame: leave the fixed frame's
+            // height alone. Nothing about the robot is read - the calibration moves tf_origin and
+            // the base follows from /tf, so the robot's own Transform is an output here, not an
+            // input. The thumbstick trim is the only thing that shifts it.
+            if (_verticalMode == VerticalMode.KeepRobotHeight)
+                originPosition.y = tree.transform.position.y;
+            originPosition.y += _heightNudge;
 
             RememberTransform(tree.transform);
 
@@ -833,7 +852,14 @@ namespace Unity.Robotics
             // "did the calibration actually do anything" is asked at exactly this moment.
             TfOriginIndicator.NotifyMoved(tree.transform, "ArUco calibration");
 
-            how = "Moved the TF origin, so the scan and cloud follow the robot.";
+            // Say whether the robot is going to move, because "nothing visibly happened" is
+            // otherwise indistinguishable from a failed calibration. With the anchor off the
+            // robot staying put IS the correct result - only what hangs off /tf moves.
+            bool anchoredToTf = _robotAnchor != null && _robotAnchor.AnchorToTf;
+            how = anchoredToTf
+                ? "Moved the TF origin, so the robot, scan and cloud all follow it."
+                : "Moved the TF origin. The robot is not anchored to TF, so it stays where it " +
+                  "is - turn its TF anchor on for it to follow.";
             return true;
         }
 

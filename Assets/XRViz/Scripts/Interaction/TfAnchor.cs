@@ -108,6 +108,24 @@ namespace Unity.Robotics
                 ApplyMode();
         }
 
+        // Rebind a copy to its own handle. Same reason PlacementHandle.SetTarget exists: the
+        // handle is outside this object's hierarchy, so a clone's _handle still names the
+        // original's and TF would drive the wrong object through it.
+        public void SetHandle(PlacementHandle handle)
+        {
+            _handle = handle;
+
+            // A copy made while TF anchoring is already on has to suspend its OWN handle, not go
+            // on holding the original's suspended
+            if (_anchorToTf && _handle != null)
+                _handle.SetSuspended(true);
+        }
+
+        public void SetLabel(string label)
+        {
+            _label = label;
+        }
+
         public void SetAnchorToTf(bool anchorToTf)
         {
             if (_anchorToTf == anchorToTf)

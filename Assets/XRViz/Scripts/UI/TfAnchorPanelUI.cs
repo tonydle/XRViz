@@ -13,12 +13,14 @@ namespace Unity.Robotics
     //
     // Anchors are found at open time rather than serialized, matching ControlPanelActions - one
     // added to the scene by hand shows up here without the generator being re-run. Rows are a
-    // fixed set of buttons like the topic browser's, with no paging: past six anchors in one scene
-    // the room is the problem, not the panel.
+    // fixed set of buttons like the topic browser's, and paged for the same reason: the Views
+    // page duplicates visualisations at runtime, and an anchor that has scrolled off a list with
+    // no way to reach it cannot be flipped back to manual when TF puts it somewhere wrong.
     public class TfAnchorPanelUI : MonoBehaviour
     {
         [SerializeField] private TMP_Text _status;
         [SerializeField] private Button[] _rows;
+        [SerializeField] private TMP_Text _pageLabel;
 
         // Statuses change on their own as topics arrive and TF resolves, so the list re-renders
         // on a timer rather than only on a press
@@ -27,8 +29,12 @@ namespace Unity.Robotics
         private readonly List<TfAnchor> _anchors = new List<TfAnchor>();
         private TMP_Text[] _rowLabels;
         private float _nextRefresh;
+        private int _page;
 
         private int RowCount => _rows != null ? _rows.Length : 0;
+        private int PageCount => RowCount == 0
+            ? 1
+            : Mathf.Max(1, Mathf.CeilToInt(_anchors.Count / (float)RowCount));
 
         private void Awake()
         {
@@ -59,6 +65,27 @@ namespace Unity.Robotics
             _anchors.Clear();
             _anchors.AddRange(FindObjectsByType<TfAnchor>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None));
+
+            // Stable order across rebuilds - see VisibilityPanelUI
+            _anchors.Sort((a, b) => string.Compare(a.Label, b.Label, System.StringComparison.Ordinal));
+
+            _page = Mathf.Clamp(_page, 0, PageCount - 1);
+            Render();
+        }
+
+        public void NextPage()
+        {
+            if (_page + 1 >= PageCount)
+                return;
+            _page++;
+            Render();
+        }
+
+        public void PreviousPage()
+        {
+            if (_page == 0)
+                return;
+            _page--;
             Render();
         }
 
@@ -86,10 +113,11 @@ namespace Unity.Robotics
 
         private void ToggleRow(int rowIndex)
         {
-            if (rowIndex >= _anchors.Count)
+            int index = _page * RowCount + rowIndex;
+            if (index >= _anchors.Count)
                 return;
 
-            _anchors[rowIndex].ToggleAnchorToTf();
+            _anchors[index].ToggleAnchorToTf();
             Render();
         }
 
@@ -97,9 +125,13 @@ namespace Unity.Robotics
         {
             RenderStatus();
 
+            if (_pageLabel != null)
+                _pageLabel.text = $"{_page + 1} / {PageCount}";
+
             for (int i = 0; i < RowCount; i++)
             {
-                bool hasAnchor = i < _anchors.Count;
+                int index = _page * RowCount + i;
+                bool hasAnchor = index < _anchors.Count;
                 // Empty rows stay in place but dead, so the list doesn't reflow under the ray
                 _rows[i].interactable = hasAnchor;
                 if (_rowLabels[i] == null)
@@ -111,7 +143,7 @@ namespace Unity.Robotics
                     continue;
                 }
 
-                _rowLabels[i].text = DescribeAnchor(_anchors[i]);
+                _rowLabels[i].text = DescribeAnchor(_anchors[index]);
             }
         }
 

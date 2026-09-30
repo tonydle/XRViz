@@ -406,7 +406,7 @@ public static class XRVizCreateMVPScene
         // because the window's height in metres - and so where its bottom edge is - is not known
         // until a frame arrives and its aspect is read.
         var imageHandleOffset = new Vector3(0f, -0.3f, 0f);
-        CreatePlacementHandle(k_ImageWindowHandleStyle, imagePosition + imageHandleOffset, 0.035f,
+        var imageHandle = CreatePlacementHandle(k_ImageWindowHandleStyle, imagePosition + imageHandleOffset, 0.035f,
             target: imageGo.transform, articulationBody: null, offset: -imageHandleOffset,
             yawOnly: true);
 
@@ -447,6 +447,20 @@ public static class XRVizCreateMVPScene
         imageHotkeySo.ApplyModifiedPropertiesWithoutUndo();
         var actions = panelRootGo.AddComponent<ControlPanelActions>();
 
+        // Makes and unmakes copies of the visualisations at runtime. On the panel's root rather
+        // than on the Views page: a page only exists while it is the one showing, and the copies
+        // it has made have to outlive navigating away from it.
+        var spawner = panelRootGo.AddComponent<VisualizationSpawner>();
+        ConfigureSpawner(spawner, new (string Label, GameObject Template, GameObject Handle, float Spacing)[]
+        {
+            // Sensors get a wide step - two clouds half a metre apart read as two clouds, two
+            // 20 cm apart as one confusing one. Image windows are flat panels, so they tile.
+            ("Laser Scan", scanGo, scanHandle, 0.7f),
+            ("RGBd Camera", cloudGo, cloudHandle, 0.7f),
+            ("PointCloud2", cloud2Go, cloud2Handle, 0.7f),
+            ("Camera Image", imageGo, imageHandle, 0.45f),
+        });
+
         var canvasGo = new GameObject("ROS Panel", typeof(Canvas));
         canvasGo.transform.SetParent(panelRootGo.transform, false);
         var canvas = canvasGo.GetComponent<Canvas>();
@@ -478,6 +492,9 @@ public static class XRVizCreateMVPScene
         {
             ("ROS", "XRViz  \u00b7  ROS connection"),
             ("Topics", "XRViz  \u00b7  Topics"),
+            // Next to Topics on purpose: adding a view and giving it a topic are one task
+            // done in two steps, and they are the two tabs you move between while doing it.
+            ("Views", "XRViz  \u00b7  How many of each"),
             ("TF", "XRViz  \u00b7  TF placement"),
             ("Scene", "XRViz  \u00b7  Scene"),
             ("Calibrate", "XRViz  \u00b7  Chassis calibration"),
@@ -485,7 +502,7 @@ public static class XRVizCreateMVPScene
             // The keypad has no tab: it is a step inside changing the IP, not a place you visit
             (null, "XRViz  \u00b7  ROS IP address"),
         };
-        const int keypadPageIndex = 6;
+        const int keypadPageIndex = 7;
 
         var pageRoots = new GameObject[pageNames.Length];
         for (int i = 0; i < pageNames.Length; i++)
@@ -493,15 +510,14 @@ public static class XRVizCreateMVPScene
 
         CreateKeypadPage(pageRoots[keypadPageIndex].transform, statusUi, tabs);
         var rosStatusText = CreateRosPage(pageRoots[0].transform, statusUi, tabs, keypadPageIndex);
-        CreateTopicsPage(pageRoots[1].transform,
-            new MonoBehaviour[]
-            {
-                jointStateSub, scanSub, colorSub, depthSub, depthInfoSub, cloud2Sub, imageSub,
-            });
-        CreateFramesPage(pageRoots[2].transform, actions);
-        CreateScenePage(pageRoots[3].transform, actions);
-        CreateCalibratePage(pageRoots[4].transform, calibrator);
-        CreateGuidePage(pageRoots[5].transform);
+        // No target list: the browser finds every subscriber in the scene, which is the only way
+        // the copies made on the Views page can turn up in it
+        CreateTopicsPage(pageRoots[1].transform);
+        CreateViewsPage(pageRoots[2].transform, spawner, actions);
+        CreateFramesPage(pageRoots[3].transform, actions);
+        CreateScenePage(pageRoots[4].transform, actions);
+        CreateCalibratePage(pageRoots[5].transform, calibrator);
+        CreateGuidePage(pageRoots[6].transform);
 
         var statusSo = new SerializedObject(statusUi);
         statusSo.FindProperty("_jointStateSub").objectReferenceValue = jointStateSub;
@@ -587,8 +603,9 @@ public static class XRVizCreateMVPScene
             "showing at a time:\n" +
             "  ROS - connect, disconnect, retype the endpoint IP on a keypad\n" +
             "  Topics - ask the endpoint what it's advertising and re-point a subscriber at a " +
-            "different topic; the arrows pick which subscriber, and the list is filtered to that " +
-            "subscriber's message type\n" +
+            "different topic; the arrows pick which subscriber, the list is filtered to that " +
+            "subscriber's message type, and the red X detaches it from its topic again\n" +
+            "  Views - how many of each visualisation the scene has, with a - and a + per kind\n" +
             "  TF - per-visualisation TF/manual placement, with the frame each one is using, " +
             "plus All to TF / All to Manual\n" +
             "  Scene - show/hide each visualisation, Clear Data, Reset Layout\n" +
@@ -605,6 +622,22 @@ public static class XRVizCreateMVPScene
             "a size up) for the TF origin, with a key on the panel's Guide tab. Each is movable out " +
             "of the box: near grab (reach out and grab it) AND ray grab (point at it from a distance " +
             "and hold the trigger); whatever it's pointed at follows either way.\n\n" +
+
+            "SEVERAL OF THE SAME THING. The Views tab has a row per kind of visualisation - " +
+            "laser scan, RGBd camera, PointCloud2, camera image - with a count and a -/+ that " +
+            "adds and removes copies at runtime. A copy is a full visualisation: its own " +
+            "subscribers, its own grab handle (same colour as the original's), its own TF anchor " +
+            "and its own row on the TF and Scene tabs. It arrives beside the one it was copied " +
+            "from with NO topic bound, so give it one on the Topics tab, where it appears as its " +
+            "own target - that is the whole point, two camera windows on two different cameras. " +
+            "The count includes the scene's own instance and stops at 1: to get rid of that one, " +
+            "hide it on the Scene tab or detach its topic with the Topics tab's X. The robot has " +
+            "no row, deliberately - there is one robot.\n\n" +
+
+            "DETACHING A TOPIC. The red X on the Topics tab unsubscribes the selected subscriber " +
+            "from the endpoint: its callback is dropped and nothing more comes over the socket " +
+            "for it. It is the same state everything starts in, so re-pick a topic to bring it " +
+            "back. Two subscribers may share one topic; detaching one leaves the other running.\n\n" +
 
             "TF ANCHORING. Press 'All to TF' on the TF tab and the robot, laser scan and point cloud " +
             "stop being placed by hand and are placed from /tf instead - each at its own frame, all " +
@@ -1119,20 +1152,33 @@ public static class XRVizCreateMVPScene
     //
     // Paged rather than scrolled: a ScrollRect is fiddly to hit with a ray, and fixed rows need
     // no viewport mask, layout group or content size fitter.
-    static TopicBrowserUI CreateTopicsPage(Transform page, MonoBehaviour[] targets)
+    // Page: what each subscriber in the scene is bound to, and what else it could be bound to.
+    //
+    // No serialized target list. The browser finds every IRosTopicBinding in the scene itself,
+    // which is what lets a camera window added on the Views tab turn up here a moment later; a
+    // list baked in at generation time could only name what existed when this ran.
+    static TopicBrowserUI CreateTopicsPage(Transform page)
     {
         const int rowCount = 7;
 
         var browserUi = page.gameObject.AddComponent<TopicBrowserUI>();
 
-        var prevTargetButton = CreateButton(page, "\u25c0", new Vector2(-176f, 228f),
-            new Vector2(56f, 52f), 22f, true, k_ButtonAccent);
+        var prevTargetButton = CreateButton(page, "\u25c0", new Vector2(-180f, 228f),
+            new Vector2(48f, 52f), 22f, true, k_ButtonAccent);
         UnityEventTools.AddVoidPersistentListener(prevTargetButton.onClick, browserUi.PreviousTarget);
-        var targetLabel = CreateLabel(page, "Target Label", "", new Vector2(0f, 228f),
-            new Vector2(276f, 52f), 20f);
-        var nextTargetButton = CreateButton(page, "\u25b6", new Vector2(176f, 228f),
-            new Vector2(56f, 52f), 22f, true, k_ButtonAccent);
+        var targetLabel = CreateLabel(page, "Target Label", "", new Vector2(-20f, 228f),
+            new Vector2(228f, 52f), 20f);
+        var nextTargetButton = CreateButton(page, "\u25b6", new Vector2(124f, 228f),
+            new Vector2(48f, 52f), 22f, true, k_ButtonAccent);
         UnityEventTools.AddVoidPersistentListener(nextTargetButton.onClick, browserUi.NextTarget);
+
+        // Detach the selected subscriber from its topic. Red and beside the name of the thing it
+        // acts on, because it is the one control on this page that takes something away - and
+        // the row list below is a list of topics you could pick, where an X per row would mean
+        // "unsubscribe from a topic I am not on".
+        var detachButton = CreateButton(page, "\u2715", new Vector2(180f, 228f),
+            new Vector2(48f, 52f), 22f, true, k_ButtonNegative);
+        UnityEventTools.AddVoidPersistentListener(detachButton.onClick, browserUi.UnsubscribeTarget);
 
         var status = CreateLabel(page, "Status", "", new Vector2(0f, 186f),
             new Vector2(400f, 26f), 17f);
@@ -1174,10 +1220,6 @@ public static class XRVizCreateMVPScene
         UnityEventTools.AddVoidPersistentListener(nextButton.onClick, browserUi.NextPage);
 
         var browserSo = new SerializedObject(browserUi);
-        var targetsProp = browserSo.FindProperty("_targets");
-        targetsProp.arraySize = targets.Length;
-        for (int i = 0; i < targets.Length; i++)
-            targetsProp.GetArrayElementAtIndex(i).objectReferenceValue = targets[i];
         browserSo.FindProperty("_targetLabel").objectReferenceValue = targetLabel;
         browserSo.FindProperty("_status").objectReferenceValue = status;
         browserSo.FindProperty("_pageLabel").objectReferenceValue = pageLabel;
@@ -1192,6 +1234,108 @@ public static class XRVizCreateMVPScene
         return browserUi;
     }
 
+    // Tells the spawner which objects it may copy. Kinds are named here, in the one place that
+    // already knows how each visualisation was built and which handle belongs to it - the
+    // alternative is a list in the Inspector that goes stale the next time this runs.
+    //
+    // The robot is deliberately absent. There is one robot: a second one would subscribe to a
+    // second /joint_states and stand in the room beside the first, and the arm the chassis
+    // calibration snaps onto has to be unambiguous.
+    static void ConfigureSpawner(VisualizationSpawner spawner,
+        (string Label, GameObject Template, GameObject Handle, float Spacing)[] kinds)
+    {
+        var so = new SerializedObject(spawner);
+        var kindsProp = so.FindProperty("_kinds");
+        kindsProp.arraySize = kinds.Length;
+        for (int i = 0; i < kinds.Length; i++)
+        {
+            var element = kindsProp.GetArrayElementAtIndex(i);
+            element.FindPropertyRelative("Label").stringValue = kinds[i].Label;
+            element.FindPropertyRelative("Template").objectReferenceValue = kinds[i].Template;
+            element.FindPropertyRelative("Handle").objectReferenceValue =
+                kinds[i].Handle != null ? kinds[i].Handle.GetComponent<PlacementHandle>() : null;
+            element.FindPropertyRelative("SpacingMetres").floatValue = kinds[i].Spacing;
+            // Six of anything is already more subscribers than the socket enjoys, and more
+            // windows than there is room for around one robot
+            element.FindPropertyRelative("MaxCount").intValue = 6;
+        }
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // Page: how many of each visualisation the scene has. A row per kind with a minus, the
+    // count, and a plus.
+    //
+    // The count includes the scene's own instance, so it starts at 1 and never reaches 0 - the
+    // generated one is the template every copy is made from, and destroying it would leave
+    // nothing to copy and no way back. "I do not want this one" is the Scene tab (hide it) or
+    // the Topics tab (detach its topic), both of which leave it recoverable.
+    static VisualizationCountPanelUI CreateViewsPage(Transform page, VisualizationSpawner spawner,
+        ControlPanelActions actions)
+    {
+        int rowCount = Mathf.Max(1, spawner.KindCount);
+
+        var panelUi = page.gameObject.AddComponent<VisualizationCountPanelUI>();
+
+        var status = CreateLabel(page, "Status", "", new Vector2(0f, 226f),
+            new Vector2(400f, 26f), 17f);
+        status.color = k_TextMuted;
+
+        var rowLabels = new TextMeshProUGUI[rowCount];
+        var countLabels = new TextMeshProUGUI[rowCount];
+        var addButtons = new Button[rowCount];
+        var removeButtons = new Button[rowCount];
+
+        for (int i = 0; i < rowCount; i++)
+        {
+            float y = 166f - i * 64f;
+
+            rowLabels[i] = CreateLabel(page, $"View Row {i}", "", new Vector2(-92f, y),
+                new Vector2(216f, 48f), 20f, TextAlignmentOptions.Left);
+
+            // Minus first, then the number, then plus: the order they read in, and the order the
+            // count sits between the two things that change it
+            removeButtons[i] = CreateButton(page, "\u2212", new Vector2(66f, y),
+                new Vector2(50f, 48f), 24f, true, k_ButtonNegative);
+            removeButtons[i].gameObject.name = $"View Remove {i}";
+
+            countLabels[i] = CreateLabel(page, $"View Count {i}", "1", new Vector2(124f, y),
+                new Vector2(46f, 48f), 22f);
+
+            addButtons[i] = CreateButton(page, "+", new Vector2(182f, y),
+                new Vector2(50f, 48f), 24f, true, k_ButtonPositive);
+            addButtons[i].gameObject.name = $"View Add {i}";
+        }
+
+        CreateDivider(page, -110f, 400f);
+
+        CreateHint(page, new Vector2(0f, -196f), new Vector2(400f, 120f),
+            "A new copy arrives beside the one it was made from, with NO topic - give it one on " +
+            "the Topics tab, where it appears as its own target. Copies carry their own grab " +
+            "handle, TF anchor and Scene row. The minus removes the newest copy and detaches its " +
+            "subscribers from the endpoint; the scene's own one cannot be removed.");
+
+        var so = new SerializedObject(panelUi);
+        so.FindProperty("_spawner").objectReferenceValue = spawner;
+        so.FindProperty("_actions").objectReferenceValue = actions;
+        so.FindProperty("_status").objectReferenceValue = status;
+
+        SetArray(so, "_rowLabels", rowLabels);
+        SetArray(so, "_countLabels", countLabels);
+        SetArray(so, "_addButtons", addButtons);
+        SetArray(so, "_removeButtons", removeButtons);
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        return panelUi;
+    }
+
+    static void SetArray(SerializedObject so, string propertyName, Object[] values)
+    {
+        var prop = so.FindProperty(propertyName);
+        prop.arraySize = values.Length;
+        for (int i = 0; i < values.Length; i++)
+            prop.GetArrayElementAtIndex(i).objectReferenceValue = values[i];
+    }
+
     // Page: TF placement. Which frame each visualisation would be placed by, whether that frame
     // has actually turned up in /tf, and a press per row to flip just that one.
     static TfAnchorPanelUI CreateFramesPage(Transform page, ControlPanelActions actions)
@@ -1200,9 +1344,21 @@ public static class XRVizCreateMVPScene
 
         var panelUi = page.gameObject.AddComponent<TfAnchorPanelUI>();
 
-        var status = CreateLabel(page, "Status", "", new Vector2(0f, 226f),
-            new Vector2(400f, 46f), 17f);
+        var status = CreateLabel(page, "Status", "", new Vector2(-70f, 226f),
+            new Vector2(260f, 46f), 17f);
         status.color = k_TextMuted;
+
+        // Paged since visualisations can be duplicated at runtime. Up beside the status rather
+        // than below the rows: the rows are two lines tall and already reach the hint.
+        var prevPageButton = CreateButton(page, "\u25c0", new Vector2(96f, 226f),
+            new Vector2(38f, 36f), 17f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(prevPageButton.onClick, panelUi.PreviousPage);
+        var pageLabel = CreateLabel(page, "Page Label", "1 / 1", new Vector2(140f, 226f),
+            new Vector2(44f, 36f), 16f);
+        pageLabel.color = k_TextMuted;
+        var nextPageButton = CreateButton(page, "\u25b6", new Vector2(184f, 226f),
+            new Vector2(38f, 36f), 17f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(nextPageButton.onClick, panelUi.NextPage);
 
         // Two buttons that each do exactly what they say, replacing one button whose label
         // flipped between naming the state and naming the action - which has to be read twice,
@@ -1238,6 +1394,7 @@ public static class XRVizCreateMVPScene
 
         var so = new SerializedObject(panelUi);
         so.FindProperty("_status").objectReferenceValue = status;
+        so.FindProperty("_pageLabel").objectReferenceValue = pageLabel;
         var rowsProp = so.FindProperty("_rows");
         rowsProp.arraySize = rowCount;
         for (int i = 0; i < rowCount; i++)
@@ -1395,9 +1552,21 @@ public static class XRVizCreateMVPScene
 
         var panelUi = page.gameObject.AddComponent<VisibilityPanelUI>();
 
-        var status = CreateLabel(page, "Status", "", new Vector2(0f, 230f),
-            new Vector2(400f, 26f), 17f);
+        var status = CreateLabel(page, "Status", "", new Vector2(-70f, 230f),
+            new Vector2(260f, 26f), 17f);
         status.color = k_TextMuted;
+
+        // Same pager as the TF page, for the same reason: the Views tab can put more
+        // visualisations in the scene than six rows hold.
+        var prevPageButton = CreateButton(page, "\u25c0", new Vector2(96f, 230f),
+            new Vector2(38f, 34f), 17f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(prevPageButton.onClick, panelUi.PreviousPage);
+        var pageLabel = CreateLabel(page, "Page Label", "1 / 1", new Vector2(140f, 230f),
+            new Vector2(44f, 34f), 16f);
+        pageLabel.color = k_TextMuted;
+        var nextPageButton = CreateButton(page, "\u25b6", new Vector2(184f, 230f),
+            new Vector2(38f, 34f), 17f, true, k_ButtonNeutral);
+        UnityEventTools.AddVoidPersistentListener(nextPageButton.onClick, panelUi.NextPage);
 
         // One line per row (label + shown/hidden), unlike the TF page's two - there is no frame
         // name to make room for here
@@ -1435,6 +1604,7 @@ public static class XRVizCreateMVPScene
 
         var so = new SerializedObject(panelUi);
         so.FindProperty("_status").objectReferenceValue = status;
+        so.FindProperty("_pageLabel").objectReferenceValue = pageLabel;
         var rowsProp = so.FindProperty("_rows");
         rowsProp.arraySize = rowCount;
         for (int i = 0; i < rowCount; i++)
@@ -1528,7 +1698,10 @@ public static class XRVizCreateMVPScene
             "it from a distance and hold the trigger. The panel has one of its own, below it.\n\n" +
             "<b>Lost the panel</b>\nPress Menu while facing away from it and it comes to you.\n\n" +
             "<b>Nothing is drawing</b>\nPick topics on the Topics tab: the laser scan and the " +
-            "point cloud start with none.",
+            "point cloud start with none.\n\n" +
+            "<b>Two of something</b>\nViews tab, + on its row. The copy arrives beside the " +
+            "original with no topic; give it one on Topics. The red X there detaches a " +
+            "subscriber from its topic again.",
             new Vector2(0f, -110f), new Vector2(400f, 250f), 16f, TextAlignmentOptions.TopLeft);
         text.color = k_TextPrimary;
     }

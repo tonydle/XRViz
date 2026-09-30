@@ -14,14 +14,18 @@ namespace Unity.Robotics
     // selector, then pick its topic. The list is filtered to the selected target's message type,
     // so you can't wire sensor_msgs/LaserScan into a JointState subscriber by accident.
     //
+    // Targets are FOUND rather than serialized, matching ControlPanelActions and the TF and Scene
+    // pages. That is what lets the Views page add a second camera window at runtime and have it
+    // turn up here to be given a topic; a serialized list could only ever name what existed when
+    // the scene was generated. They are sorted by hierarchy path, which groups a visualisation's
+    // subscribers under it ("RGBd Camera 2 Color" next to "RGBd Camera 2 Depth") and keeps the
+    // order stable - FindObjectsByType makes no promise about its own.
+    //
     // Paged rather than scrolled: a fixed set of row buttons is far easier to hit with a ray than
     // a ScrollRect, and needs no mask or layout group. Rows are recycled - labels are rewritten
     // per page.
     public class TopicBrowserUI : MonoBehaviour
     {
-        // Each must implement IRosTopicBinding. Serialized as MonoBehaviour because Unity can't
-        // serialize interface references directly; validated in Awake.
-        [SerializeField] private MonoBehaviour[] _targets;
         [SerializeField] private TMP_Text _targetLabel;
         [SerializeField] private TMP_Text _status;
         [SerializeField] private TMP_Text _pageLabel;
@@ -75,25 +79,6 @@ namespace Unity.Robotics
 
         private void Awake()
         {
-            if (_targets != null)
-            {
-                foreach (var target in _targets)
-                {
-                    if (target is IRosTopicBinding binding)
-                    {
-                        _bindings.Add(binding);
-                        _bindingNames.Add(target.gameObject.name);
-                    }
-                    else if (target != null)
-                        Debug.LogWarning($"[XRViz] {target.GetType().Name} on '{target.name}' does not " +
-                            $"implement {nameof(IRosTopicBinding)}; skipping it in the topic browser.", this);
-                }
-            }
-
-            if (_bindings.Count == 0)
-                Debug.LogWarning($"[XRViz] {nameof(TopicBrowserUI)} has no usable targets; topics will " +
-                    "list but selecting one will do nothing.", this);
-
             _rowLabels = new TMP_Text[RowsPerPage];
             for (int i = 0; i < RowsPerPage; i++)
             {
@@ -105,8 +90,11 @@ namespace Unity.Robotics
 
         private void OnEnable()
         {
-            // Opening the panel is the natural moment to ask - the list is a snapshot, and
-            // nodes come and go while the app is running
+            // Both lists are snapshots: nodes come and go on the ROS side, and visualisations
+            // come and go on this side (the Views page). Opening the tab is the moment to ask
+            // about both.
+            RebuildTargets();
+
             if (_refreshOnOpen)
                 Refresh();
             else
@@ -140,6 +128,90 @@ namespace Unity.Robotics
             SetStatus("requesting topic list…");
             RenderTargetLabel();
             ROSConnection.GetOrCreateInstance().GetTopicAndTypeList(OnTopicList);
+        }
+
+        // Re-find every subscriber in the scene, keeping the one currently selected selected.
+        // Public so the page can be told to look again without being closed and reopened.
+        public void RebuildTargets()
+        {
+            IRosTopicBinding previous = ActiveBinding;
+
+            _bindings.Clear();
+            _bindingNames.Clear();
+
+            var behaviours = FindObjectsByType<MonoBehaviour>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+            var found = new List<MonoBehaviour>();
+            foreach (var behaviour in behaviours)
+            {
+                if (behaviour is IRosTopicBinding)
+                    found.Add(behaviour);
+            }
+
+            // Hierarchy path, so a visualisation's own subscribers land together and in the same
+            // order every time. FindObjectsByType's order is unspecified, and a target list that
+            // reshuffles between openings is unusable with two arrow buttons.
+            found.Sort((a, b) => string.Compare(HierarchyPath(a), HierarchyPath(b),
+                System.StringComparison.Ordinal));
+
+            foreach (var behaviour in found)
+            {
+                _bindings.Add((IRosTopicBinding)behaviour);
+                _bindingNames.Add(behaviour.gameObject.name);
+            }
+
+            // Follow the selection rather than the index: adding a camera window renumbers
+            // everything after it, and landing on a different subscriber than the one you were
+            // looking at is how you retarget the wrong thing.
+            int index = previous != null ? _bindings.IndexOf(previous) : -1;
+            _targetIndex = index >= 0 ? index : 0;
+
+            if (_bindings.Count == 0)
+                Debug.LogWarning($"[XRViz] {nameof(TopicBrowserUI)} found no {nameof(IRosTopicBinding)} " +
+                    "in the scene; topics will list but selecting one will do nothing.", this);
+        }
+
+        private static string HierarchyPath(Component component)
+        {
+            var path = new System.Text.StringBuilder(component.gameObject.name);
+            for (Transform t = component.transform.parent; t != null; t = t.parent)
+                path.Insert(0, t.name + "/");
+            return path.ToString();
+        }
+
+        // Detach the selected subscriber from its topic: ROSConnection drops the callback and
+        // nothing more arrives, which is the point - a subscriber left bound to a busy camera
+        // costs socket bandwidth whether or not anyone is looking at it.
+        //
+        // SetTopic("") is the whole mechanism. It unsubscribes, stores the empty name, and
+        // Subscribe() no-ops on it, which is exactly the state every visualisation in the
+        // generated scene starts in - so a detached one is not a special case anywhere, it is
+        // simply one that has not been given a topic yet.
+        public void UnsubscribeTarget()
+        {
+            var binding = ActiveBinding;
+            if (binding == null)
+                return;
+
+            string topic = binding.Topic;
+            if (string.IsNullOrEmpty(topic))
+            {
+                SetStatus("<color=#FFB300>nothing bound to detach</color>");
+                return;
+            }
+
+            binding.SetTopic(string.Empty);
+
+            // Say what is left on the topic. Two windows on one camera is a normal thing to set
+            // up here, and "did closing this one kill the other" is the question that follows.
+            int others = RosSubscriberRegistry.CountOn(topic);
+            SetStatus(others > 0
+                ? $"detached from {topic} · {others} other subscriber(s) still on it"
+                : $"detached from <color=#FFB300>{topic}</color>");
+
+            RenderTargetLabel();
+            Render();
         }
 
         public void NextTarget()

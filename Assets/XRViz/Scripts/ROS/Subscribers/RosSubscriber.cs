@@ -5,7 +5,8 @@ using System.Collections.Generic;
 
 namespace Unity.Robotics
 {
-    public abstract class RosSubscriber<T> : MonoBehaviour, IRosSubscriberDiagnostics where T: ROSTCPConnector.MessageGeneration.Message
+    public abstract class RosSubscriber<T> : MonoBehaviour, IRosSubscriberDiagnostics, IRosResubscribe
+        where T: ROSTCPConnector.MessageGeneration.Message
     {
         [SerializeField] protected string _topic = "";
         [SerializeField] protected int _queueSize = 1;
@@ -41,7 +42,25 @@ namespace Unity.Robotics
             // create a Queue of _queueSize initial capacity (which can increases)
             _incomingMessages = new Queue<T>(_queueSize);
             _started = true;
+            RosSubscriberRegistry.Add(this);
             Subscribe();
+        }
+
+        // Detach from the endpoint when this object goes away. A visualisation can be closed at
+        // runtime now (the panel's Views tab destroys the copies it made), and a destroyed
+        // subscriber whose callback is still registered means ROSConnection goes on deserializing
+        // its topic and handing the messages to a dead object.
+        //
+        // Virtual, and declared here rather than left to Unity's message dispatch, because two
+        // subclasses already define OnDestroy for their textures. Unity calls the most-derived
+        // OnDestroy only, so a private one here would silently never run for those two - the same
+        // trap that keeps LateUpdate out of this class.
+        protected virtual void OnDestroy()
+        {
+            string topic = _topic;
+            Unsubscribe();
+            RosSubscriberRegistry.Remove(this);
+            RosSubscriberRegistry.RestoreOthers(this, topic);
         }
 
         protected virtual void Update()
@@ -80,6 +99,7 @@ namespace Unity.Robotics
                 return;
             }
 
+            string previous = _topic;
             Unsubscribe();
             _topic = topic;
 
@@ -94,6 +114,14 @@ namespace Unity.Robotics
             _lastMessageRealtime = -1f;
 
             Subscribe();
+
+            // Unsubscribe() took every callback on the old topic with it, including any other
+            // subscriber sharing it - put those back before anyone notices they stopped
+            int restored = RosSubscriberRegistry.RestoreOthers(this, previous);
+            if (restored > 0)
+                Debug.Log($"[XRViz] '{name}' left {previous}; re-registered {restored} other " +
+                    "subscriber(s) still bound to it.", this);
+
             OnTopicChanged();
         }
 
@@ -114,10 +142,22 @@ namespace Unity.Robotics
         {
             if (!_subscribed || string.IsNullOrEmpty(_topic))
                 return;
-            // Note this drops every callback registered on the topic, not just ours - fine while
-            // one component owns a topic, which is the case throughout XRViz
+            // This drops every callback registered on the topic, not just ours. Callers are
+            // responsible for putting the others back - see RosSubscriberRegistry.RestoreOthers,
+            // which both paths out of here (SetTopic and OnDestroy) call.
             ROSConnection.GetOrCreateInstance().Unsubscribe(_topic);
             _subscribed = false;
+        }
+
+        // IRosResubscribe: re-register a callback that somebody else's unsubscribe removed. Not
+        // a retarget - the topic has not changed, so nothing about the queue or the counters is
+        // reset; as far as this subscriber is concerned nothing happened, which is the point.
+        void IRosResubscribe.RestoreSubscription()
+        {
+            if (string.IsNullOrEmpty(_topic))
+                return;
+            ROSConnection.GetOrCreateInstance().Subscribe<T>(_topic, ReceiveCallback);
+            _subscribed = true;
         }
 
         protected bool NewMessageAvailable()

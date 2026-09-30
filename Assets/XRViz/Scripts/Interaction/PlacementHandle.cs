@@ -108,6 +108,24 @@ namespace Unity.Robotics
                 gameObject.SetActive(!suspended);
         }
 
+        // Point this handle at something else, and treat where it ends up as its home.
+        //
+        // For a handle cloned alongside the visualisation it grips: Instantiate remaps references
+        // that point INSIDE the copied hierarchy, but a handle is a separate root object holding
+        // an outside reference, so the copy comes out still driving the original - grab the new
+        // sphere and the old cloud moves. Re-homing the default pose as well is what makes Reset
+        // Layout put the copy back beside its own visualisation rather than on top of the one it
+        // was cloned from.
+        public void SetTarget(Transform target, ArticulationBody articulationBody = null)
+        {
+            _target = target;
+            _targetArticulationBody = articulationBody;
+
+            SnapToTarget();
+            _defaultPosition = transform.position;
+            _defaultRotation = transform.rotation;
+        }
+
         // Move the grip relative to whatever it carries. For a visualisation whose size isn't
         // known until the first message arrives - ImageWindow, whose window is sized from the
         // image's own aspect - a serialized offset cannot be right: the handle has to stay clear

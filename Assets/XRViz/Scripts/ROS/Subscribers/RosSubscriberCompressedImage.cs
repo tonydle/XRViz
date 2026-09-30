@@ -94,8 +94,9 @@ namespace Unity.Robotics
             return _texture2D;
         }
 
-        protected void OnDestroy()
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
             if (_texture2D != null)
             {
                 Destroy(_texture2D);
