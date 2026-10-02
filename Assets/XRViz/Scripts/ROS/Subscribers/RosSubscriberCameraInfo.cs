@@ -5,7 +5,7 @@ using RosCameraInfo = RosMessageTypes.Sensor.CameraInfoMsg;
 
 namespace Unity.Robotics
 {
-    public class RosSubscriberCameraInfo : RosSubscriber<RosCameraInfo>
+    public class RosSubscriberCameraInfo : RosSubscriber<RosCameraInfo>, IRosFrameSource
     {
         private string _frame_id = "";
         private float[] _necessaryInfo = new float[4];
@@ -61,5 +61,8 @@ namespace Unity.Robotics
         {
             return _frame_id;
         }
+
+        // Same value under the interface TfAnchor consumes; GetFrameId stays for existing callers
+        public string FrameId => _frame_id;
     }
 }

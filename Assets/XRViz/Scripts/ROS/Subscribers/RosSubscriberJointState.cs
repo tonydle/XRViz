@@ -77,6 +77,16 @@ namespace Unity.Robotics
             }
         }
 
+        // Retargeted at a different topic - the pose we're holding came from the old one, so
+        // drop it and wait for the new topic to deliver. _latestTime is deliberately left alone:
+        // RosConnectionStatusUI detects arrivals by watching that stamp change, so zeroing it
+        // would read as "a joint state just arrived" the instant you switch topics.
+        protected override void OnTopicChanged()
+        {
+            _ready = false;
+            _jointState.Clear();
+        }
+
         public bool isReady()
         {
             return _ready;

@@ -1,5 +1,4 @@
 using UnityEngine;
-using LightBuzz.Jpeg;
 using RosCompressedImage = RosMessageTypes.Sensor.CompressedImageMsg;
 
 namespace Unity.Robotics
@@ -9,14 +8,12 @@ namespace Unity.Robotics
         private Texture2D _texture2D;
         private TextureFormat _textureFormat = TextureFormat.RGB24;
         private RosCompressedImage _msg;
-        private JpegDecoder _jpegDecoder;
         private bool _ready = false;
 
         protected override void Start()
         {
             base.Start();
             _texture2D = new Texture2D(1, 1, _textureFormat, false);
-            _jpegDecoder = new JpegDecoder();
         }
 
         protected override void Update()
@@ -44,13 +41,11 @@ namespace Unity.Robotics
 
                 if (_msg.format.Contains("jpeg"))
                 {
-                    var rawData = _jpegDecoder.Decode(_msg.data, PixelFormat.RGB, Flag.NONE, out var width, out var height);
-                    if (_texture2D.width != width || _texture2D.height != height)
+                    if (!ImageConversion.LoadImage(_texture2D, _msg.data))
                     {
-                        _texture2D.Reinitialize(width, height, _textureFormat, false);
+                        Debug.LogError("JPEG decode failed for compressed image. format=" + _msg.format);
+                        return;
                     }
-                    _texture2D.LoadRawTextureData(rawData);
-                    _texture2D.Apply();
                 }
                 else if (_msg.format.Contains("png") || _msg.format.Contains("compressedDepth"))
                 {
@@ -99,8 +94,9 @@ namespace Unity.Robotics
             return _texture2D;
         }
 
-        protected void OnDestroy()
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
             if (_texture2D != null)
             {
                 Destroy(_texture2D);

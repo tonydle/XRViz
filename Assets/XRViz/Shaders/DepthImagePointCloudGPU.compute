@@ -1,0 +1,123 @@
+// Reconstructs a point cloud from an RGBD camera's depth + colour images.
+//
+// Separate from PointCloudReconstructionGPU.compute rather than an edit of it: that one is
+// still wired into PointCloudRosGPU, hardcodes 16-bit millimetre depth, assumes the camera
+// frame is FLU, and requires the image dimensions to divide by 8. This one takes the depth
+// scale as a parameter, uses the correct optical-frame convention, and bounds-checks so any
+// resolution works.
+//
+// FRAME CONVENTION - this is the part that is easy to get wrong. A camera's
+// *_optical_frame is NOT the FLU body frame the rest of XRViz converts from with
+// FLU.ConvertToRUF. Per REP 103/145 (and the comment in sensor_msgs/Image itself) an optical
+// frame is right-down-forward: +x right across the image, +y down, +z into the scene. Unity is
+// right-up-forward. So the conversion is just a Y flip - (x, -y, z) - and emphatically not the
+// (-y, z, x) shuffle FLU needs. Using the FLU conversion here lands the cloud on its side.
+//
+// ORIGIN - positions come out in world space, having been pushed through originTransform (the
+// visualiser's localToWorldMatrix). That transform is the cloud's origin: the camera's optical
+// centre sits exactly on the GameObject, and the cloud extends forward along its +Z. Move the
+// GameObject - via a PlacementHandle - and the whole cloud moves with it.
+
+#pragma kernel DepthImagePointCloud
+
+Texture2D<float4> inColor;
+Texture2D<float4> inDepth;
+
+RWStructuredBuffer<float3> positionsOut;
+RWStructuredBuffer<float4> colorsOut;
+
+// fx, fy, cx, cy of the DEPTH camera, in depth-image pixels
+float4 depthIntrinsics;
+
+int depthWidth;
+int depthHeight;
+int colorWidth;
+int colorHeight;
+
+// Output grid. Decimation: one point per `stride` pixels in each axis, so a stride of 2 is a
+// quarter of the points. outWidth/outHeight are the already-divided dimensions.
+int outWidth;
+int outHeight;
+int stride;
+
+// Texel value -> metres. Folds the texture format's normalisation together with the encoding's
+// unit, so 16UC1 (R16, millimetres) and 32FC1 (RFloat, metres) both arrive here as one number.
+float depthMetersPerUnit;
+
+float minRange;
+float maxRange;
+
+// Non-zero when the colour image is bgr8/bgra8 - Unity has no BGR texture format to upload
+// into, so the swap happens here instead of costing a CPU pass over every frame
+int colorIsBgr;
+int hasColor;
+
+float4x4 originTransform;
+
+void Discard(uint index)
+{
+    positionsOut[index] = float3(0, 0, 0);
+    // Alpha 0 is the cull signal the billboard shader collapses the quad on
+    colorsOut[index] = float4(0, 0, 0, 0);
+}
+
+[numthreads(8,8,1)]
+void DepthImagePointCloud (uint3 id : SV_DispatchThreadID)
+{
+    // Dispatched with ceil(out/8) groups, so the last group runs past the end - bounds-check
+    // rather than requiring the image to divide by 8 the way the old pipeline did
+    if ((int)id.x >= outWidth || (int)id.y >= outHeight)
+        return;
+
+    uint outIndex = id.y * outWidth + id.x;
+
+    int u = (int)id.x * stride;
+    int v = (int)id.y * stride;
+    if (u >= depthWidth || v >= depthHeight)
+    {
+        Discard(outIndex);
+        return;
+    }
+
+    float depth = inDepth.Load(int3(u, v, 0)).r * depthMetersPerUnit;
+
+    // Written as a positive test so NaN fails it too: a sim reports "no return" as either 0,
+    // NaN or +Inf depending on the renderer, and NaN through the projection below would
+    // poison the buffer with points that break the bounding box
+    if (!(depth > minRange && depth < maxRange))
+    {
+        Discard(outIndex);
+        return;
+    }
+
+    float fx = depthIntrinsics.x;
+    float fy = depthIntrinsics.y;
+    float cx = depthIntrinsics.z;
+    float cy = depthIntrinsics.w;
+
+    // Pinhole back-projection in the optical frame (right, down, forward)
+    float xRight = (u - cx) * depth / fx;
+    float yDown  = (v - cy) * depth / fy;
+
+    // Optical (RDF) -> Unity (RUF): flip Y, keep the rest
+    float3 local = float3(xRight, -yDown, depth);
+
+    positionsOut[outIndex] = mul(originTransform, float4(local, 1.0)).xyz;
+
+    float4 color = float4(0.8, 0.8, 0.8, 1.0);
+    if (hasColor != 0)
+    {
+        // Nearest-neighbour from depth pixel to colour pixel. Correct only for a registered
+        // (depth-to-colour aligned) pair, which is what an RGBD sim publishes - two physically
+        // offset cameras would need the extrinsics and a reprojection.
+        int cu = (int)((u + 0.5) * colorWidth / depthWidth);
+        int cv = (int)((v + 0.5) * colorHeight / depthHeight);
+        cu = clamp(cu, 0, colorWidth - 1);
+        cv = clamp(cv, 0, colorHeight - 1);
+
+        float4 sampled = inColor.Load(int3(cu, cv, 0));
+        color = float4(colorIsBgr != 0 ? sampled.bgr : sampled.rgb, 1.0);
+    }
+
+    colorsOut[outIndex] = color;
+}

@@ -6,15 +6,27 @@
     <application
         android:networkSecurityConfig="@xml/network_security_config"
         android:hardwareAccelerated="true">
-        <activity android:name="com.unity3d.player.UnityPlayerActivity"
-                  android:theme="@style/UnityThemeSelector">
+        <activity android:name="com.unity3d.player.UnityPlayerGameActivity"
+                  android:exported="true"
+                  android:theme="@style/BaseUnityGameActivityTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
         </activity>
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Passthrough camera access, for the ArUco chassis calibration. Horizon OS v74+ only, and
+         granted by the user at runtime the first time Calibrate is pressed. Nothing else in the
+         app reads the camera, and there is no equivalent over Quest Link - which is why the
+         calibration reports itself unavailable in the Editor rather than appearing to hang.
+
+         Both are required. Unity merges this file with the manifests the packages contribute
+         and adds CAMERA itself once it sees WebCamTexture used, so this declaration is belt and
+         braces rather than load-bearing - but the permission is one XRViz genuinely uses, and
+         relying on a compiler-driven auto-add for that is not worth the saving. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="horizonos.permission.HEADSET_CAMERA" />
 </manifest>

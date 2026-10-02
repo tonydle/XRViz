@@ -66,12 +66,18 @@ sysinfo.txt
 # Mono auto generated files
 mono_crash.*
 
+# Unity Editor crash-recovery scene snapshots
+/[Aa]ssets/_Recovery/
+
 # Builds
 *.apk
 *.aab
 *.unitypackage
 *.unitypackage.meta
 *.app
+
+# Burst compiler debug output (regenerated on every build)
+*_BurstDebugInformation_DoNotShip/
 
 # Crashlytics generated file
 crashlytics-build.properties
@@ -100,4 +106,3 @@ InitTestScene*.unity*
 
 .vsconfig
 .vscode/
-Assets/LightBuzz_Jpeg*

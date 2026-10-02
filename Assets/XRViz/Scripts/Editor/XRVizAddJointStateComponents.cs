@@ -54,6 +54,12 @@ public static class XRVizAddJointStateComponents
         EditorUtility.SetDirty(rosWriter);
 
         Debug.Log($"[XRViz] RobotStateWriterControllerRos linked on {GetPath(root)}");
+
+        // 6) Bake joint names into Assembly-CSharp components so they survive an Android build,
+        // where the URDF Importer assembly isn't present - see XRVizBakeUrdfJointNames
+        int baked = XRVizBakeUrdfJointNames.Bake(root);
+        Debug.Log($"[XRViz] Baked {baked} URDF joint name(s) on {GetPath(root)}");
+
         Debug.Log("[XRViz] Add Joint State Components complete.");
     }
 

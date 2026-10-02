@@ -1,4 +1,9 @@
 ﻿<Solution>
-  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="Unity.Robotics.UrdfImporter.Editor.csproj" />
+  <Project Path="Unity.Robotics.UrdfImporter.Runtime.Tests.csproj" />
+  <Project Path="Unity.Robotics.UrdfImporter.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="vhacd.csproj" />
+  <Project Path="Unity.Robotics.UrdfImporter.Editor.Tests.csproj" />
 </Solution>
