@@ -126,6 +126,13 @@ namespace Unity.Robotics
             _label = label;
         }
 
+        // The fallback frame, for an anchor made at runtime (RobotSelector) rather than by the
+        // scene generator - the robot's root frame differs from one robot to the next
+        public void SetFrameId(string frameId)
+        {
+            _frameId = frameId ?? "";
+        }
+
         public void SetAnchorToTf(bool anchorToTf)
         {
             if (_anchorToTf == anchorToTf)

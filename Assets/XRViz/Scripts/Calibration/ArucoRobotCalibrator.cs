@@ -260,6 +260,13 @@ namespace Unity.Robotics
                 _feed = GetComponent<PassthroughCameraFeed>();
         }
 
+        // RobotSelector, after swapping the robot. The handle stays the same object and is
+        // retargeted in place, so only the anchor - which lives on the robot - needs repointing.
+        public void SetRobotAnchor(TfAnchor anchor)
+        {
+            _robotAnchor = anchor;
+        }
+
         // Wired to the calibration panel's button.
         public void BeginCalibration()
         {

@@ -240,6 +240,7 @@ GameObject:
   - component: {fileID: 4371049756232502308}
   - component: {fileID: 809692033692147256}
   - component: {fileID: 2974309536658984227}
+  - component: {fileID: 8406214518630743542}
   m_Layer: 0
   m_Name: left_shoulder_pitch_link
   m_TagString: Untagged
@@ -378,6 +379,19 @@ MonoBehaviour:
   jointName: left_shoulder_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &8406214518630743542
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 140416687149042137}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_shoulder_pitch_joint
 --- !u!1 &173486596550532131
 GameObject:
   m_ObjectHideFlags: 0
@@ -573,6 +587,7 @@ GameObject:
   - component: {fileID: 7409994395921134371}
   - component: {fileID: 578412256153399430}
   - component: {fileID: 3453058237958463065}
+  - component: {fileID: 1878949761341986432}
   m_Layer: 0
   m_Name: waist_roll_link
   m_TagString: Untagged
@@ -621,7 +636,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.086
-  m_ParentAnchorPosition: {x: 0, y: 0.04400003, z: -0.0039635}
+  m_ParentAnchorPosition: {x: 0, y: 0.044, z: -0.0039635}
   m_ParentAnchorRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
@@ -711,6 +726,19 @@ MonoBehaviour:
   jointName: waist_roll_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &1878949761341986432
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 253012075172831701}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: waist_roll_joint
 --- !u!1 &276507630322373636
 GameObject:
   m_ObjectHideFlags: 0
@@ -961,6 +989,7 @@ GameObject:
   - component: {fileID: 3531532695928675227}
   - component: {fileID: 8162443214530876988}
   - component: {fileID: 5259251506560932518}
+  - component: {fileID: 7011470971993150523}
   m_Layer: 0
   m_Name: L_thumb_proximal_base
   m_TagString: Untagged
@@ -1009,7 +1038,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0018869
-  m_ParentAnchorPosition: {x: 0.069100015, y: 0.020450026, z: -0.01696001}
+  m_ParentAnchorPosition: {x: 0.069100015, y: 0.020449996, z: -0.01696001}
   m_ParentAnchorRotation: {x: 0.0000014007092, y: -0.70710826, z: -0.70710564, w: -0.0000013411045}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
@@ -1099,6 +1128,19 @@ MonoBehaviour:
   jointName: L_thumb_proximal_yaw_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &7011470971993150523
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 410539114781108975}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_thumb_proximal_yaw_joint
 --- !u!1 &411365475949861750
 GameObject:
   m_ObjectHideFlags: 0
@@ -1206,6 +1248,7 @@ GameObject:
   - component: {fileID: 7155946326141556960}
   - component: {fileID: 3650980746331451948}
   - component: {fileID: 4147300798215969043}
+  - component: {fileID: 1565693862435340142}
   m_Layer: 0
   m_Name: R_pinky_proximal
   m_TagString: Untagged
@@ -1254,7 +1297,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0042403
-  m_ParentAnchorPosition: {x: 0.13571009, y: 0.025487993, z: 0.00028525293}
+  m_ParentAnchorPosition: {x: 0.13571009, y: 0.025488023, z: 0.00028526783}
   m_ParentAnchorRotation: {x: 0.000000022390514, y: 0.000000019756337, z: -0.74313605, w: -0.66914093}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
@@ -1344,6 +1387,19 @@ MonoBehaviour:
   jointName: R_pinky_proximal_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &1565693862435340142
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 526319102675117249}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_pinky_proximal_joint
 --- !u!1 &530602753671870940
 GameObject:
   m_ObjectHideFlags: 0
@@ -1357,6 +1413,7 @@ GameObject:
   - component: {fileID: 4688899985964400273}
   - component: {fileID: 2347881034452234359}
   - component: {fileID: 3074473324459230081}
+  - component: {fileID: 6304461703815190748}
   m_Layer: 0
   m_Name: L_thumb_intermediate
   m_TagString: Untagged
@@ -1405,7 +1462,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0037844
-  m_ParentAnchorPosition: {x: 0.034553118, y: -0.0007999723, z: 0.04407001}
+  m_ParentAnchorPosition: {x: 0.034553118, y: -0.00079996855, z: 0.044069994}
   m_ParentAnchorRotation: {x: 0.00000003161014, y: 0.000000010536713, z: 0.707107, w: 0.7071071}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -1495,6 +1552,19 @@ MonoBehaviour:
   jointName: L_thumb_intermediate_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &6304461703815190748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 530602753671870940}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_thumb_intermediate_joint
 --- !u!1 &627132808673672671
 GameObject:
   m_ObjectHideFlags: 0
@@ -1600,6 +1670,7 @@ GameObject:
   - component: {fileID: 4779437997471905487}
   - component: {fileID: 8170724229853694685}
   - component: {fileID: 6041989181632595676}
+  - component: {fileID: 238131460780297220}
   m_Layer: 0
   m_Name: R_index_intermediate
   m_TagString: Untagged
@@ -1647,7 +1718,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0045683
-  m_ParentAnchorPosition: {x: -0.032026134, y: -0.0009999479, z: -0.002613888}
+  m_ParentAnchorPosition: {x: -0.032026134, y: -0.0009999777, z: -0.002613888}
   m_ParentAnchorRotation: {x: -0.0000000671098, y: 0.00000005920727, z: -0.70710707, w: 0.70710707}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
@@ -1737,6 +1808,19 @@ MonoBehaviour:
   jointName: R_index_intermediate_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &238131460780297220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 674972858793228494}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_index_intermediate_joint
 --- !u!1 &691542460421337969
 GameObject:
   m_ObjectHideFlags: 0
@@ -2319,6 +2403,7 @@ GameObject:
   - component: {fileID: 702651225217147287}
   - component: {fileID: 7093509870656506075}
   - component: {fileID: 8715243686176544357}
+  - component: {fileID: 267476676486874663}
   m_Layer: 0
   m_Name: left_hip_roll_link
   m_TagString: Untagged
@@ -2457,6 +2542,19 @@ MonoBehaviour:
   jointName: left_hip_roll_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &267476676486874663
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1175665081036745263}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_hip_roll_joint
 --- !u!1 &1189330416936851920
 GameObject:
   m_ObjectHideFlags: 0
@@ -2561,6 +2659,7 @@ GameObject:
   - component: {fileID: 5526811861971008406}
   - component: {fileID: 7017550580506885357}
   - component: {fileID: 6765770096531269359}
+  - component: {fileID: 4981801889795721409}
   m_Layer: 0
   m_Name: left_hip_yaw_link
   m_TagString: Untagged
@@ -2699,6 +2798,19 @@ MonoBehaviour:
   jointName: left_hip_yaw_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &4981801889795721409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1354318114847819277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_hip_yaw_joint
 --- !u!1 &1380552165683279101
 GameObject:
   m_ObjectHideFlags: 0
@@ -2712,6 +2824,7 @@ GameObject:
   - component: {fileID: 4036398222347448054}
   - component: {fileID: 2826313074465195702}
   - component: {fileID: 5963143319253237233}
+  - component: {fileID: 443595658556473400}
   m_Layer: 0
   m_Name: right_wrist_pitch_link
   m_TagString: Untagged
@@ -2850,6 +2963,19 @@ MonoBehaviour:
   jointName: right_wrist_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &443595658556473400
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1380552165683279101}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_wrist_pitch_joint
 --- !u!1 &1421281245266215633
 GameObject:
   m_ObjectHideFlags: 0
@@ -2907,6 +3033,7 @@ GameObject:
   - component: {fileID: 4949354048564387802}
   - component: {fileID: 5619980066106984785}
   - component: {fileID: 2601141428275587982}
+  - component: {fileID: 1898512825127274003}
   m_Layer: 0
   m_Name: imu_in_torso
   m_TagString: Untagged
@@ -2954,7 +3081,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 1
-  m_ParentAnchorPosition: {x: 0.00224, y: 0.14791998, z: -0.03959}
+  m_ParentAnchorPosition: {x: 0.00224, y: 0.14792, z: -0.03959}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -3026,6 +3153,19 @@ MonoBehaviour:
   jointName: imu_in_torso_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &1898512825127274003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1455447425563861270}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: imu_in_torso_joint
 --- !u!1 &1457444787523459604
 GameObject:
   m_ObjectHideFlags: 0
@@ -3320,6 +3460,7 @@ GameObject:
   - component: {fileID: 5568535174450006926}
   - component: {fileID: 4860043352924533661}
   - component: {fileID: 8820358876486041938}
+  - component: {fileID: 82918959030046786}
   m_Layer: 0
   m_Name: left_wrist_roll_link
   m_TagString: Untagged
@@ -3458,6 +3599,19 @@ MonoBehaviour:
   jointName: left_wrist_roll_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &82918959030046786
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1647643607318909279}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_wrist_roll_joint
 --- !u!1 &1648881841090994510
 GameObject:
   m_ObjectHideFlags: 0
@@ -3471,6 +3625,7 @@ GameObject:
   - component: {fileID: 7625766768987219853}
   - component: {fileID: 1970596143046161394}
   - component: {fileID: 1642157628133743282}
+  - component: {fileID: 6718865600825637430}
   m_Layer: 0
   m_Name: left_shoulder_yaw_link
   m_TagString: Untagged
@@ -3609,6 +3764,19 @@ MonoBehaviour:
   jointName: left_shoulder_yaw_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &6718865600825637430
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1648881841090994510}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_shoulder_yaw_joint
 --- !u!1 &1649855186424520210
 GameObject:
   m_ObjectHideFlags: 0
@@ -3926,6 +4094,7 @@ GameObject:
   - component: {fileID: 5925729531482192826}
   - component: {fileID: 1788117422542238784}
   - component: {fileID: 6485414627016861356}
+  - component: {fileID: 1929327258267146322}
   m_Layer: 0
   m_Name: right_elbow_link
   m_TagString: Untagged
@@ -3974,7 +4143,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.6
-  m_ParentAnchorPosition: {x: -0.000000020489097, y: -0.08051798, z: 0.015783003}
+  m_ParentAnchorPosition: {x: -0.000000020489097, y: -0.08051801, z: 0.015783003}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0, w: 1.0000002}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -4064,6 +4233,19 @@ MonoBehaviour:
   jointName: right_elbow_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &1929327258267146322
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1783679117367463805}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_elbow_joint
 --- !u!1 &1807358544687904876
 GameObject:
   m_ObjectHideFlags: 0
@@ -4212,6 +4394,7 @@ GameObject:
   - component: {fileID: 4776634287906060977}
   - component: {fileID: 4901196118426768940}
   - component: {fileID: 9195513225488415039}
+  - component: {fileID: 4577908192799130646}
   m_Layer: 0
   m_Name: left_knee_link
   m_TagString: Untagged
@@ -4350,6 +4533,19 @@ MonoBehaviour:
   jointName: left_knee_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &4577908192799130646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1835460453372014531}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_knee_joint
 --- !u!1 &1911330780668490975
 GameObject:
   m_ObjectHideFlags: 0
@@ -4363,6 +4559,7 @@ GameObject:
   - component: {fileID: 5213266137589256852}
   - component: {fileID: 5907225280528306853}
   - component: {fileID: 5129355631560559494}
+  - component: {fileID: 5783250402112414286}
   m_Layer: 0
   m_Name: right_wrist_yaw_link
   m_TagString: Untagged
@@ -4411,7 +4608,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.08457647
-  m_ParentAnchorPosition: {x: 0.0000000037252903, y: 0.000000029802322, z: 0.04600005}
+  m_ParentAnchorPosition: {x: 0.0000000037252903, y: 0, z: 0.04600005}
   m_ParentAnchorRotation: {x: 0, y: 0, z: -0.707107, w: 0.707107}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
@@ -4501,6 +4698,19 @@ MonoBehaviour:
   jointName: right_wrist_yaw_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &5783250402112414286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1911330780668490975}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_wrist_yaw_joint
 --- !u!1 &1915030806718780837
 GameObject:
   m_ObjectHideFlags: 0
@@ -4560,6 +4770,7 @@ GameObject:
   - component: {fileID: 8439593966814508653}
   - component: {fileID: 3576366943769048028}
   - component: {fileID: 8895594525564330058}
+  - component: {fileID: 132751182351717688}
   m_Layer: 0
   m_Name: R_ring_intermediate
   m_TagString: Untagged
@@ -4697,6 +4908,19 @@ MonoBehaviour:
   jointName: R_ring_intermediate_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &132751182351717688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2023089949405049282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_ring_intermediate_joint
 --- !u!1 &2029788560740356678
 GameObject:
   m_ObjectHideFlags: 0
@@ -4966,6 +5190,7 @@ GameObject:
   - component: {fileID: 4567063152416027385}
   - component: {fileID: 5578624617960708053}
   - component: {fileID: 3757203780628313897}
+  - component: {fileID: 7471108107470841985}
   m_Layer: 0
   m_Name: right_hip_pitch_link
   m_TagString: Untagged
@@ -5014,7 +5239,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 1.35
-  m_ParentAnchorPosition: {x: 0.064452, y: -0.102699995, z: 0}
+  m_ParentAnchorPosition: {x: 0.064452, y: -0.1027, z: 0}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0, w: 1}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -5104,6 +5329,19 @@ MonoBehaviour:
   jointName: right_hip_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &7471108107470841985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2228058929927173794}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_hip_pitch_joint
 --- !u!1 &2233717375129218619
 GameObject:
   m_ObjectHideFlags: 0
@@ -5162,6 +5400,7 @@ GameObject:
   - component: {fileID: 7508640523419959803}
   - component: {fileID: 3076475297090567773}
   - component: {fileID: 6035531363852948310}
+  - component: {fileID: 3396575083414652734}
   m_Layer: 0
   m_Name: head_link
   m_TagString: Untagged
@@ -5299,6 +5538,19 @@ MonoBehaviour:
   jointName: head_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &3396575083414652734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2245595707986873215}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: head_joint
 --- !u!1 &2247792594636629837
 GameObject:
   m_ObjectHideFlags: 0
@@ -5312,6 +5564,7 @@ GameObject:
   - component: {fileID: 4950085018532791097}
   - component: {fileID: 1124683730345642028}
   - component: {fileID: 175205236726384579}
+  - component: {fileID: 4725057156904366502}
   m_Layer: 0
   m_Name: waist_yaw_link
   m_TagString: Untagged
@@ -5450,6 +5703,19 @@ MonoBehaviour:
   jointName: waist_yaw_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &4725057156904366502
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2247792594636629837}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: waist_yaw_joint
 --- !u!1 &2257771748131608118
 GameObject:
   m_ObjectHideFlags: 0
@@ -5508,6 +5774,7 @@ GameObject:
   - component: {fileID: 4208559336752161905}
   - component: {fileID: 6440748407979328730}
   - component: {fileID: 8454883844072934776}
+  - component: {fileID: 3299948341897797655}
   m_Layer: 0
   m_Name: L_middle_intermediate
   m_TagString: Untagged
@@ -5645,6 +5912,19 @@ MonoBehaviour:
   jointName: L_middle_intermediate_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &3299948341897797655
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2259493432227083704}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_middle_intermediate_joint
 --- !u!1 &2272626527965165205
 GameObject:
   m_ObjectHideFlags: 0
@@ -5797,6 +6077,7 @@ GameObject:
   - component: {fileID: 2366648172659178552}
   - component: {fileID: 5846914033927087176}
   - component: {fileID: 643807435967931114}
+  - component: {fileID: 3563541473053998696}
   m_Layer: 0
   m_Name: L_thumb_proximal
   m_TagString: Untagged
@@ -5845,7 +6126,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0066101
-  m_ParentAnchorPosition: {x: -0.009824237, y: -0.008899969, z: 0.0099867545}
+  m_ParentAnchorPosition: {x: -0.009824244, y: -0.008899969, z: 0.009986725}
   m_ParentAnchorRotation: {x: -0.08459379, y: 0.00000012665987, z: 0.99641585, w: -0.0000017285347}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -5935,6 +6216,19 @@ MonoBehaviour:
   jointName: L_thumb_proximal_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &3563541473053998696
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2323501136573503827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_thumb_proximal_pitch_joint
 --- !u!1 &2344452954010066657
 GameObject:
   m_ObjectHideFlags: 0
@@ -6220,6 +6514,7 @@ GameObject:
   - component: {fileID: 7309231654790014914}
   - component: {fileID: 5635207054772882910}
   - component: {fileID: 3940306023414596819}
+  - component: {fileID: 355471964261403748}
   m_Layer: 0
   m_Name: torso_link
   m_TagString: Untagged
@@ -6275,7 +6570,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 6.78
-  m_ParentAnchorPosition: {x: 0, y: 0.000000029802322, z: 0}
+  m_ParentAnchorPosition: {x: 0, y: 0, z: 0}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0, w: 1}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -6365,6 +6660,19 @@ MonoBehaviour:
   jointName: waist_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &355471964261403748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2450357385195238821}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: waist_pitch_joint
 --- !u!1 &2489902210109504104
 GameObject:
   m_ObjectHideFlags: 0
@@ -6702,6 +7010,7 @@ GameObject:
   - component: {fileID: 6247071355378987101}
   - component: {fileID: 7748944070967873059}
   - component: {fileID: 7525081550587495300}
+  - component: {fileID: 3506875081028866467}
   m_Layer: 0
   m_Name: R_hand_base_link
   m_TagString: Untagged
@@ -6756,7 +7065,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.14143
-  m_ParentAnchorPosition: {x: -0.000000011175871, y: 0, z: 0.041500017}
+  m_ParentAnchorPosition: {x: -0.000000007450581, y: 0, z: 0.041500017}
   m_ParentAnchorRotation: {x: -0.5000002, y: 0.5000002, z: -0.5000002, w: 0.5000002}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -6846,6 +7155,19 @@ MonoBehaviour:
   jointName: R_base_link_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &3506875081028866467
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2599980077445841538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_base_link_joint
 --- !u!1 &2607319696052490633
 GameObject:
   m_ObjectHideFlags: 0
@@ -6859,6 +7181,7 @@ GameObject:
   - component: {fileID: 39161327187241319}
   - component: {fileID: 1931234581198980002}
   - component: {fileID: 5731493963542721891}
+  - component: {fileID: 2018258810370661264}
   m_Layer: 0
   m_Name: R_ring_proximal
   m_TagString: Untagged
@@ -6907,7 +7230,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0042403
-  m_ParentAnchorPosition: {x: 0.13691011, y: 0.0062871864, z: 0.00028526783}
+  m_ParentAnchorPosition: {x: 0.13691011, y: 0.006287216, z: 0.00028526783}
   m_ParentAnchorRotation: {x: 0.000000024366148, y: 0.000000017780703, z: -0.7253859, w: -0.6883429}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
@@ -6997,6 +7320,19 @@ MonoBehaviour:
   jointName: R_ring_proximal_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &2018258810370661264
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2607319696052490633}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_ring_proximal_joint
 --- !u!1 &2631459271457121593
 GameObject:
   m_ObjectHideFlags: 0
@@ -7010,6 +7346,7 @@ GameObject:
   - component: {fileID: 6914559165794114956}
   - component: {fileID: 8923899901312156842}
   - component: {fileID: 1786981024424654702}
+  - component: {fileID: 592809229776493556}
   m_Layer: 0
   m_Name: right_ankle_roll_link
   m_TagString: Untagged
@@ -7147,6 +7484,19 @@ MonoBehaviour:
   jointName: right_ankle_roll_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &592809229776493556
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2631459271457121593}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_ankle_roll_joint
 --- !u!1 &2661992911667034468
 GameObject:
   m_ObjectHideFlags: 0
@@ -7343,6 +7693,7 @@ GameObject:
   - component: {fileID: 3263019814229341634}
   - component: {fileID: 3778078555108496916}
   - component: {fileID: 3133331322796718580}
+  - component: {fileID: 7697060275222156664}
   m_Layer: 0
   m_Name: R_thumb_proximal
   m_TagString: Untagged
@@ -7391,7 +7742,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0066075
-  m_ParentAnchorPosition: {x: -0.010892075, y: -0.009249963, z: -0.008809892}
+  m_ParentAnchorPosition: {x: -0.010892067, y: -0.009249963, z: -0.008809892}
   m_ParentAnchorRotation: {x: 0.99001354, y: 0.000001847744, z: -0.14097516, w: -0.000000029802322}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
@@ -7481,6 +7832,19 @@ MonoBehaviour:
   jointName: R_thumb_proximal_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &7697060275222156664
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2769658789327325198}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_thumb_proximal_pitch_joint
 --- !u!1 &2779854513015809777
 GameObject:
   m_ObjectHideFlags: 0
@@ -7494,6 +7858,7 @@ GameObject:
   - component: {fileID: 8653592854752924283}
   - component: {fileID: 6311982370074879541}
   - component: {fileID: 3558940029236724356}
+  - component: {fileID: 6971723430421783516}
   m_Layer: 0
   m_Name: right_wrist_roll_link
   m_TagString: Untagged
@@ -7632,6 +7997,19 @@ MonoBehaviour:
   jointName: right_wrist_roll_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &6971723430421783516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2779854513015809777}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_wrist_roll_joint
 --- !u!1 &2794831501821680649
 GameObject:
   m_ObjectHideFlags: 0
@@ -7736,6 +8114,7 @@ GameObject:
   - component: {fileID: 3922341326907308765}
   - component: {fileID: 7929846451977349016}
   - component: {fileID: 4326392729305712653}
+  - component: {fileID: 3324566227728795376}
   m_Layer: 0
   m_Name: right_ankle_pitch_link
   m_TagString: Untagged
@@ -7874,6 +8253,19 @@ MonoBehaviour:
   jointName: right_ankle_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &3324566227728795376
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2868754324179078039}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_ankle_pitch_joint
 --- !u!1 &2906114925998581545
 GameObject:
   m_ObjectHideFlags: 0
@@ -7933,6 +8325,7 @@ GameObject:
   - component: {fileID: 6340307640958070130}
   - component: {fileID: 1074202564981161949}
   - component: {fileID: 2531749615838582391}
+  - component: {fileID: 5514512833209780133}
   m_Layer: 0
   m_Name: left_ankle_pitch_link
   m_TagString: Untagged
@@ -8071,6 +8464,19 @@ MonoBehaviour:
   jointName: left_ankle_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &5514512833209780133
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2916094799592261059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_ankle_pitch_joint
 --- !u!1 &2974642514001736455
 GameObject:
   m_ObjectHideFlags: 0
@@ -8310,6 +8716,7 @@ GameObject:
   - component: {fileID: 1791214285432505295}
   - component: {fileID: 1663243561771792676}
   - component: {fileID: 5736995568237478933}
+  - component: {fileID: 3839263950576905627}
   m_Layer: 0
   m_Name: R_middle_proximal
   m_TagString: Untagged
@@ -8448,6 +8855,19 @@ MonoBehaviour:
   jointName: R_middle_proximal_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &3839263950576905627
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3035233214429918563}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_middle_proximal_joint
 --- !u!1 &3057274190580666380
 GameObject:
   m_ObjectHideFlags: 0
@@ -8461,6 +8881,7 @@ GameObject:
   - component: {fileID: 5197731163494670945}
   - component: {fileID: 9028948955364621321}
   - component: {fileID: 1421321249471100121}
+  - component: {fileID: 4398926795499572650}
   m_Layer: 0
   m_Name: right_shoulder_pitch_link
   m_TagString: Untagged
@@ -8599,6 +9020,19 @@ MonoBehaviour:
   jointName: right_shoulder_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &4398926795499572650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3057274190580666380}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_shoulder_pitch_joint
 --- !u!1 &3076691500415678530
 GameObject:
   m_ObjectHideFlags: 0
@@ -9258,6 +9692,7 @@ GameObject:
   - component: {fileID: 9055641695409939062}
   - component: {fileID: 6819135308802336152}
   - component: {fileID: 116215119780401374}
+  - component: {fileID: 1160912606127771750}
   m_Layer: 0
   m_Name: L_middle_proximal
   m_TagString: Untagged
@@ -9396,6 +9831,19 @@ MonoBehaviour:
   jointName: L_middle_proximal_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &1160912606127771750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3649668505010263939}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_middle_proximal_joint
 --- !u!1 &3693603464669960993
 GameObject:
   m_ObjectHideFlags: 0
@@ -9455,6 +9903,7 @@ GameObject:
   - component: {fileID: 2374776526593212495}
   - component: {fileID: 845067923759233102}
   - component: {fileID: 1871408974515284932}
+  - component: {fileID: 7034834173436518274}
   m_Layer: 0
   m_Name: R_thumb_proximal_base
   m_TagString: Untagged
@@ -9503,7 +9952,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0018869
-  m_ParentAnchorPosition: {x: 0.069100015, y: -0.020449948, z: -0.016960032}
+  m_ParentAnchorPosition: {x: 0.069100015, y: -0.020449977, z: -0.01696004}
   m_ParentAnchorRotation: {x: -0.70710826, y: -0.0000012516975, z: -0.0000012814999, w: 0.70710576}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -9593,6 +10042,19 @@ MonoBehaviour:
   jointName: R_thumb_proximal_yaw_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &7034834173436518274
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3749155780073719672}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_thumb_proximal_yaw_joint
 --- !u!1 &3768855772418223211
 GameObject:
   m_ObjectHideFlags: 0
@@ -10116,6 +10578,7 @@ GameObject:
   - component: {fileID: 1613195992534526750}
   - component: {fileID: 7720502770830161685}
   - component: {fileID: 8747400505069278208}
+  - component: {fileID: 4551090205438904318}
   m_Layer: 0
   m_Name: left_hip_pitch_link
   m_TagString: Untagged
@@ -10164,7 +10627,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 1.35
-  m_ParentAnchorPosition: {x: -0.064452, y: -0.102699995, z: 0}
+  m_ParentAnchorPosition: {x: -0.064452, y: -0.1027, z: 0}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0, w: 1}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -10254,6 +10717,19 @@ MonoBehaviour:
   jointName: left_hip_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &4551090205438904318
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4086466958907257354}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_hip_pitch_joint
 --- !u!1 &4096864194985083447
 GameObject:
   m_ObjectHideFlags: 0
@@ -10640,6 +11116,7 @@ GameObject:
   - component: {fileID: 819806237687090296}
   - component: {fileID: 1925453646454539229}
   - component: {fileID: 6612291256620468753}
+  - component: {fileID: 7269031556172579890}
   m_Layer: 0
   m_Name: L_ring_intermediate
   m_TagString: Untagged
@@ -10687,7 +11164,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0045682
-  m_ParentAnchorPosition: {x: 0.032041218, y: -0.0010000378, z: -0.0024229072}
+  m_ParentAnchorPosition: {x: 0.032041214, y: -0.001000008, z: -0.0024229072}
   m_ParentAnchorRotation: {x: 0.00000005721106, y: 0.00000006906486, z: 0.7071072, w: 0.7071072}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -10777,6 +11254,19 @@ MonoBehaviour:
   jointName: L_ring_intermediate_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &7269031556172579890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4297619221988769152}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_ring_intermediate_joint
 --- !u!1 &4308074372450729688
 GameObject:
   m_ObjectHideFlags: 0
@@ -10925,6 +11415,7 @@ GameObject:
   - component: {fileID: 282139202249781304}
   - component: {fileID: 7697368148469562311}
   - component: {fileID: 2572825573727336900}
+  - component: {fileID: 1645582136328030843}
   m_Layer: 0
   m_Name: right_knee_link
   m_TagString: Untagged
@@ -11063,6 +11554,19 @@ MonoBehaviour:
   jointName: right_knee_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &1645582136328030843
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4432528718723220368}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_knee_joint
 --- !u!1 &4447945027672286761
 GameObject:
   m_ObjectHideFlags: 0
@@ -11258,6 +11762,7 @@ GameObject:
   - component: {fileID: 3308387939020653617}
   - component: {fileID: 1818250968843636890}
   - component: {fileID: 391556654209657059}
+  - component: {fileID: 8509906654285909559}
   m_Layer: 0
   m_Name: right_shoulder_yaw_link
   m_TagString: Untagged
@@ -11396,6 +11901,19 @@ MonoBehaviour:
   jointName: right_shoulder_yaw_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &8509906654285909559
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4531810684781052675}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_shoulder_yaw_joint
 --- !u!1 &4557469885012055422
 GameObject:
   m_ObjectHideFlags: 0
@@ -11818,6 +12336,7 @@ GameObject:
   - component: {fileID: 5375797411139215435}
   - component: {fileID: 6438942197098911317}
   - component: {fileID: 3172191989011130045}
+  - component: {fileID: 1835622449172664426}
   m_Layer: 0
   m_Name: right_hip_yaw_link
   m_TagString: Untagged
@@ -11956,6 +12475,19 @@ MonoBehaviour:
   jointName: right_hip_yaw_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &1835622449172664426
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4798405402593884176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_hip_yaw_joint
 --- !u!1 &4819803915456096170
 GameObject:
   m_ObjectHideFlags: 0
@@ -12239,6 +12771,7 @@ GameObject:
   - component: {fileID: 7373870548908175040}
   - component: {fileID: 8352928623513318399}
   - component: {fileID: 156692274123658400}
+  - component: {fileID: 3094691608966070673}
   m_Layer: 0
   m_Name: imu_in_pelvis
   m_TagString: Untagged
@@ -12358,6 +12891,19 @@ MonoBehaviour:
   jointName: imu_in_pelvis_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &3094691608966070673
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4925058979503557844}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: imu_in_pelvis_joint
 --- !u!1 &4925888850666957529
 GameObject:
   m_ObjectHideFlags: 0
@@ -13413,6 +13959,7 @@ GameObject:
   - component: {fileID: 3477048361848878011}
   - component: {fileID: 91618215122757923}
   - component: {fileID: 5190235488681906173}
+  - component: {fileID: 8591908594147155559}
   m_Layer: 0
   m_Name: L_pinky_intermediate
   m_TagString: Untagged
@@ -13550,6 +14097,19 @@ MonoBehaviour:
   jointName: L_pinky_intermediate_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &8591908594147155559
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5426435211476941716}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_pinky_intermediate_joint
 --- !u!1 &5467942388194197314
 GameObject:
   m_ObjectHideFlags: 0
@@ -13653,6 +14213,7 @@ GameObject:
   - component: {fileID: 7859204781282109764}
   - component: {fileID: 6770647706157975172}
   - component: {fileID: 118301804031989412}
+  - component: {fileID: 3152941715713414509}
   m_Layer: 0
   m_Name: d435_link
   m_TagString: Untagged
@@ -13700,7 +14261,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 1
-  m_ParentAnchorPosition: {x: -0.01753, y: 0.42987004, z: 0.0576235}
+  m_ParentAnchorPosition: {x: -0.01753, y: 0.42987, z: 0.0576235}
   m_ParentAnchorRotation: {x: 0.28534964, y: -0.28534964, z: 0.6469742, w: 0.6469742}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -13772,6 +14333,19 @@ MonoBehaviour:
   jointName: d435_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &3152941715713414509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5566817073204507454}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: d435_joint
 --- !u!1 &5585516930832258947
 GameObject:
   m_ObjectHideFlags: 0
@@ -14044,6 +14618,7 @@ GameObject:
   - component: {fileID: 9023422310055467191}
   - component: {fileID: 2164340532970974962}
   - component: {fileID: 5776200559949488156}
+  - component: {fileID: 1543488603447796698}
   m_Layer: 0
   m_Name: left_wrist_yaw_link
   m_TagString: Untagged
@@ -14092,7 +14667,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.08457647
-  m_ParentAnchorPosition: {x: -0.0000000037252903, y: 0.000000029802322, z: 0.04600005}
+  m_ParentAnchorPosition: {x: -0.0000000037252903, y: 0, z: 0.04600005}
   m_ParentAnchorRotation: {x: 0, y: 0, z: -0.707107, w: 0.707107}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
@@ -14182,6 +14757,19 @@ MonoBehaviour:
   jointName: left_wrist_yaw_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &1543488603447796698
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5723179638626642565}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_wrist_yaw_joint
 --- !u!1 &5809585869889940362
 GameObject:
   m_ObjectHideFlags: 0
@@ -14523,6 +15111,7 @@ GameObject:
   - component: {fileID: 3114727594121062960}
   - component: {fileID: 2653394977446211513}
   - component: {fileID: 1279643673149193670}
+  - component: {fileID: 2763226181305898739}
   m_Layer: 0
   m_Name: R_pinky_intermediate
   m_TagString: Untagged
@@ -14570,7 +15159,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0035996
-  m_ParentAnchorPosition: {x: -0.032041155, y: -0.0010000621, z: -0.0024230038}
+  m_ParentAnchorPosition: {x: -0.03204115, y: -0.0010000323, z: -0.0024230038}
   m_ParentAnchorRotation: {x: -0.000000011112939, y: -0.000000009960487, z: -0.7071072, w: 0.7071072}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
@@ -14660,6 +15249,19 @@ MonoBehaviour:
   jointName: R_pinky_intermediate_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &2763226181305898739
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5940196135551869833}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_pinky_intermediate_joint
 --- !u!1 &5979672626802229246
 GameObject:
   m_ObjectHideFlags: 0
@@ -14901,6 +15503,7 @@ GameObject:
   - component: {fileID: 7383710891210677692}
   - component: {fileID: 3994301522757100250}
   - component: {fileID: 6507059137857054535}
+  - component: {fileID: 7256198418971561648}
   m_Layer: 0
   m_Name: left_ankle_roll_link
   m_TagString: Untagged
@@ -15038,6 +15641,19 @@ MonoBehaviour:
   jointName: left_ankle_roll_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &7256198418971561648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6210184446859254769}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_ankle_roll_joint
 --- !u!1 &6221510836214549517
 GameObject:
   m_ObjectHideFlags: 0
@@ -15051,6 +15667,7 @@ GameObject:
   - component: {fileID: 8063426391180694990}
   - component: {fileID: 966631978828286511}
   - component: {fileID: 1836276513240518278}
+  - component: {fileID: 57647881988150878}
   m_Layer: 0
   m_Name: L_ring_proximal
   m_TagString: Untagged
@@ -15099,7 +15716,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0042405
-  m_ParentAnchorPosition: {x: 0.13691011, y: -0.0062871724, z: 0.00028535724}
+  m_ParentAnchorPosition: {x: 0.13691011, y: -0.006287217, z: 0.00028535724}
   m_ParentAnchorRotation: {x: -0.00000002062745, y: -0.0000000073022113, z: 0.6883548, w: 0.72537464}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -15189,6 +15806,19 @@ MonoBehaviour:
   jointName: L_ring_proximal_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &57647881988150878
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6221510836214549517}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_ring_proximal_joint
 --- !u!1 &6245951481367851011
 GameObject:
   m_ObjectHideFlags: 0
@@ -15430,6 +16060,7 @@ GameObject:
   - component: {fileID: 1533586846331816253}
   - component: {fileID: 4127912499577809343}
   - component: {fileID: 8001782738575015932}
+  - component: {fileID: 230794455724162086}
   m_Layer: 0
   m_Name: left_elbow_link
   m_TagString: Untagged
@@ -15478,7 +16109,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.6
-  m_ParentAnchorPosition: {x: 0.0000000055879354, y: -0.08051798, z: 0.015783003}
+  m_ParentAnchorPosition: {x: 0.0000000055879354, y: -0.08051801, z: 0.015783003}
   m_ParentAnchorRotation: {x: 0, y: 0, z: 0, w: 1.0000002}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -15568,6 +16199,19 @@ MonoBehaviour:
   jointName: left_elbow_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &230794455724162086
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6558758229484478795}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_elbow_joint
 --- !u!1 &6574569358068828444
 GameObject:
   m_ObjectHideFlags: 0
@@ -16039,6 +16683,7 @@ GameObject:
   - component: {fileID: 147231542004583252}
   - component: {fileID: 4898208230864242268}
   - component: {fileID: 9137022857981312327}
+  - component: {fileID: 6751154989735712271}
   m_Layer: 0
   m_Name: right_shoulder_roll_link
   m_TagString: Untagged
@@ -16087,7 +16732,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.643
-  m_ParentAnchorPosition: {x: 0.03799999, y: -0.013831025, z: 3.8795633e-11}
+  m_ParentAnchorPosition: {x: 0.038000003, y: -0.013830997, z: 3.7147174e-11}
   m_ParentAnchorRotation: {x: 0.09840934, y: 0.70022553, z: -0.09840934, w: 0.70022553}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
@@ -16177,6 +16822,19 @@ MonoBehaviour:
   jointName: right_shoulder_roll_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &6751154989735712271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6731017481875684779}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_shoulder_roll_joint
 --- !u!1 &6736051810304076892
 GameObject:
   m_ObjectHideFlags: 0
@@ -16644,6 +17302,7 @@ GameObject:
   - component: {fileID: 2606732119469914822}
   - component: {fileID: 4766761183356706628}
   - component: {fileID: 3764908388267406512}
+  - component: {fileID: 2004791394705144632}
   m_Layer: 0
   m_Name: mid360_link
   m_TagString: Untagged
@@ -16691,7 +17350,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 1
-  m_ParentAnchorPosition: {x: -0.00003, y: 0.41618004, z: 0.00028349995}
+  m_ParentAnchorPosition: {x: -0.00003, y: 0.41618, z: 0.00028349995}
   m_ParentAnchorRotation: {x: 0.014191591, y: -0.014191591, z: 0.70696443, w: 0.70696443}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -16763,6 +17422,19 @@ MonoBehaviour:
   jointName: mid360_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &2004791394705144632
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6950231220943110270}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: mid360_joint
 --- !u!1 &6958958676330407065
 GameObject:
   m_ObjectHideFlags: 0
@@ -17103,6 +17775,7 @@ GameObject:
   - component: {fileID: 3602195463007126859}
   - component: {fileID: 3798790068973388908}
   - component: {fileID: 62415305390790958}
+  - component: {fileID: 4548985377070955376}
   m_Layer: 0
   m_Name: logo_link
   m_TagString: Untagged
@@ -17240,6 +17913,19 @@ MonoBehaviour:
   jointName: logo_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &4548985377070955376
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7247840550432980568}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: logo_joint
 --- !u!1 &7250612839383305215
 GameObject:
   m_ObjectHideFlags: 0
@@ -17343,6 +18029,7 @@ GameObject:
   - component: {fileID: 829211489835256362}
   - component: {fileID: 7464250338107789036}
   - component: {fileID: 1846287259805450680}
+  - component: {fileID: 8897558920709649907}
   m_Layer: 0
   m_Name: R_index_proximal
   m_TagString: Untagged
@@ -17391,7 +18078,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0042403
-  m_ParentAnchorPosition: {x: 0.1365301, y: -0.03226798, z: 0.00028528273}
+  m_ParentAnchorPosition: {x: 0.1365301, y: -0.03226801, z: 0.00028528273}
   m_ParentAnchorRotation: {x: -0.000000027000326, y: -0.000000015146526, z: 0.6946636, w: 0.71933526}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
@@ -17481,6 +18168,19 @@ MonoBehaviour:
   jointName: R_index_proximal_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &8897558920709649907
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7302132612073373582}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_index_proximal_joint
 --- !u!1 &7305340847047836435
 GameObject:
   m_ObjectHideFlags: 0
@@ -17539,6 +18239,7 @@ GameObject:
   - component: {fileID: 2430273638020851522}
   - component: {fileID: 588325235945012054}
   - component: {fileID: 3290624848989656989}
+  - component: {fileID: 2962453252850988384}
   m_Layer: 0
   m_Name: pelvis_contour_link
   m_TagString: Untagged
@@ -17676,6 +18377,19 @@ MonoBehaviour:
   jointName: pelvis_contour_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &2962453252850988384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7335840062757120205}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: pelvis_contour_joint
 --- !u!1 &7364263231585120745
 GameObject:
   m_ObjectHideFlags: 0
@@ -18053,6 +18767,7 @@ GameObject:
   - component: {fileID: 5709061691015224467}
   - component: {fileID: 6276702464824598932}
   - component: {fileID: 8239974984568875787}
+  - component: {fileID: 8350058787910142992}
   m_Layer: 0
   m_Name: L_thumb_distal
   m_TagString: Untagged
@@ -18190,6 +18905,19 @@ MonoBehaviour:
   jointName: L_thumb_distal_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &8350058787910142992
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7581839638515701900}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_thumb_distal_joint
 --- !u!1 &7598711778354885236
 GameObject:
   m_ObjectHideFlags: 0
@@ -18794,6 +19522,7 @@ GameObject:
   - component: {fileID: 3550895698975095586}
   - component: {fileID: 3544773268847003518}
   - component: {fileID: 4694746666278412885}
+  - component: {fileID: 2233274250730754377}
   m_Layer: 0
   m_Name: L_index_intermediate
   m_TagString: Untagged
@@ -18841,7 +19570,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0045682
-  m_ParentAnchorPosition: {x: 0.032041136, y: -0.0010000351, z: -0.0024229072}
+  m_ParentAnchorPosition: {x: 0.032041136, y: -0.0010000053, z: -0.0024229072}
   m_ParentAnchorRotation: {x: -0.0000000032206944, y: 0.0000000033647511, z: 0.707107, w: 0.707107}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -18931,6 +19660,19 @@ MonoBehaviour:
   jointName: L_index_intermediate_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &2233274250730754377
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7921476291497287326}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_index_intermediate_joint
 --- !u!1 &7931565672122375661
 GameObject:
   m_ObjectHideFlags: 0
@@ -18944,6 +19686,7 @@ GameObject:
   - component: {fileID: 5719584645558589653}
   - component: {fileID: 5262957100484155259}
   - component: {fileID: 8433575935581052965}
+  - component: {fileID: 8751049466536483996}
   m_Layer: 0
   m_Name: R_middle_intermediate
   m_TagString: Untagged
@@ -19081,6 +19824,19 @@ MonoBehaviour:
   jointName: R_middle_intermediate_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &8751049466536483996
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7931565672122375661}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_middle_intermediate_joint
 --- !u!1 &7971179378840384035
 GameObject:
   m_ObjectHideFlags: 0
@@ -19465,6 +20221,7 @@ GameObject:
   - component: {fileID: 8719918618336692372}
   - component: {fileID: 1774122865221705588}
   - component: {fileID: 4823049044745542636}
+  - component: {fileID: 6723221823837410976}
   m_Layer: 0
   m_Name: L_pinky_proximal
   m_TagString: Untagged
@@ -19513,7 +20270,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0042405
-  m_ParentAnchorPosition: {x: 0.13571009, y: -0.025487974, z: 0.00028534234}
+  m_ParentAnchorPosition: {x: 0.13571009, y: -0.025488004, z: 0.00028535724}
   m_ParentAnchorRotation: {x: -0.000000024239696, y: -0.000000032378896, z: 0.6691306, w: 0.74314505}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -19603,6 +20360,19 @@ MonoBehaviour:
   jointName: L_pinky_proximal_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &6723221823837410976
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8291449128865734946}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_pinky_proximal_joint
 --- !u!1 &8294120879293042511
 GameObject:
   m_ObjectHideFlags: 0
@@ -19753,6 +20523,7 @@ GameObject:
   - component: {fileID: 4065131915542169648}
   - component: {fileID: 211354985316556708}
   - component: {fileID: 3220422565286940652}
+  - component: {fileID: 7378953962495047840}
   m_Layer: 0
   m_Name: L_hand_base_link
   m_TagString: Untagged
@@ -19806,7 +20577,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.14143
-  m_ParentAnchorPosition: {x: 0.0000000037252903, y: -0.000000029802322, z: 0.041500017}
+  m_ParentAnchorPosition: {x: 0.000000007450581, y: 0, z: 0.041500017}
   m_ParentAnchorRotation: {x: -0.5000002, y: -0.5000002, z: 0.5000001, w: 0.5000001}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
@@ -19896,6 +20667,19 @@ MonoBehaviour:
   jointName: L_base_link_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &7378953962495047840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8406123880463880963}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_base_link_joint
 --- !u!1 &8492274689734003856
 GameObject:
   m_ObjectHideFlags: 0
@@ -20191,6 +20975,7 @@ GameObject:
   - component: {fileID: 1060587821889815111}
   - component: {fileID: 7808522439257061088}
   - component: {fileID: 3831321439354511700}
+  - component: {fileID: 8657947618884120501}
   m_Layer: 0
   m_Name: R_thumb_intermediate
   m_TagString: Untagged
@@ -20239,7 +21024,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.0037847
-  m_ParentAnchorPosition: {x: -0.034553144, y: -0.00079993176, z: 0.044070113}
+  m_ParentAnchorPosition: {x: -0.034553144, y: -0.0007999243, z: 0.04407009}
   m_ParentAnchorRotation: {x: 0, y: 0.00000004214685, z: -0.7071072, w: 0.70710695}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
@@ -20329,6 +21114,19 @@ MonoBehaviour:
   jointName: R_thumb_intermediate_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &8657947618884120501
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8654570880076285441}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_thumb_intermediate_joint
 --- !u!1 &8655856446595439249
 GameObject:
   m_ObjectHideFlags: 0
@@ -20342,6 +21140,7 @@ GameObject:
   - component: {fileID: 8745442802913584141}
   - component: {fileID: 6061313223436477811}
   - component: {fileID: 4248934949528301004}
+  - component: {fileID: 325569513702178985}
   m_Layer: 0
   m_Name: L_index_proximal
   m_TagString: Untagged
@@ -20480,6 +21279,19 @@ MonoBehaviour:
   jointName: L_index_proximal_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &325569513702178985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8655856446595439249}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: L_index_proximal_joint
 --- !u!1 &8687009068593661028
 GameObject:
   m_ObjectHideFlags: 0
@@ -20539,6 +21351,7 @@ GameObject:
   - component: {fileID: 7252603405337963492}
   - component: {fileID: 3118209769779364384}
   - component: {fileID: 7586671120939350518}
+  - component: {fileID: 5634003565676346345}
   m_Layer: 0
   m_Name: right_hip_roll_link
   m_TagString: Untagged
@@ -20677,6 +21490,19 @@ MonoBehaviour:
   jointName: right_hip_roll_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &5634003565676346345
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8770902584039074028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: right_hip_roll_joint
 --- !u!1 &8895804538709418033
 GameObject:
   m_ObjectHideFlags: 0
@@ -20690,6 +21516,7 @@ GameObject:
   - component: {fileID: 7378701321100488703}
   - component: {fileID: 1143511474844546537}
   - component: {fileID: 7191239937135310990}
+  - component: {fileID: 8511932451568237207}
   m_Layer: 0
   m_Name: left_shoulder_roll_link
   m_TagString: Untagged
@@ -20738,7 +21565,7 @@ ArticulationBody:
   m_Enabled: 1
   serializedVersion: 6
   m_Mass: 0.643
-  m_ParentAnchorPosition: {x: -0.03799999, y: -0.013831025, z: 3.8795633e-11}
+  m_ParentAnchorPosition: {x: -0.038000003, y: -0.013830997, z: 3.7147174e-11}
   m_ParentAnchorRotation: {x: -0.09840934, y: 0.70022553, z: 0.09840934, w: 0.70022553}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
   m_AnchorRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
@@ -20828,6 +21655,19 @@ MonoBehaviour:
   jointName: left_shoulder_roll_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &8511932451568237207
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8895804538709418033}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_shoulder_roll_joint
 --- !u!1 &8912646672702894981
 GameObject:
   m_ObjectHideFlags: 0
@@ -20887,6 +21727,7 @@ GameObject:
   - component: {fileID: 8184365783382092919}
   - component: {fileID: 7752691330002210671}
   - component: {fileID: 4495227133276793005}
+  - component: {fileID: 440358844167242912}
   m_Layer: 0
   m_Name: left_wrist_pitch_link
   m_TagString: Untagged
@@ -21025,6 +21866,19 @@ MonoBehaviour:
   jointName: left_wrist_pitch_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &440358844167242912
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8945343074588365072}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: left_wrist_pitch_joint
 --- !u!1 &8945356496279498221
 GameObject:
   m_ObjectHideFlags: 0
@@ -21130,6 +21984,7 @@ GameObject:
   - component: {fileID: 5878354429284813447}
   - component: {fileID: 3804805450552423072}
   - component: {fileID: 8548240930671543860}
+  - component: {fileID: 3614872539981250692}
   m_Layer: 0
   m_Name: R_thumb_distal
   m_TagString: Untagged
@@ -21267,6 +22122,19 @@ MonoBehaviour:
   jointName: R_thumb_distal_joint
   EffortLimit: 1000
   VelocityLimit: 1000
+--- !u!114 &3614872539981250692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9033020685122518815}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5814235576650c04e9392ce0139bf050, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unity.Robotics.UrdfJointName
+  _jointName: R_thumb_distal_joint
 --- !u!1 &9073938703390447594
 GameObject:
   m_ObjectHideFlags: 0

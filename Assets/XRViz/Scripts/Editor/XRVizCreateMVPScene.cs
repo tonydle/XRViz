@@ -17,14 +17,14 @@ using Oculus.Interaction.Surfaces;
 public static class XRVizCreateMVPScene
 {
     const string k_ScenePath = "Assets/XRViz/Scenes/MVP_UR3e_MR.unity";
-    const string k_RobotPrefabGuid = "5e41957997504bf458dbb54a5403d950"; // ur3e_rg2.prefab
     const string k_RayCanvasTemplateGuid = "8369d93f7b6b99742bbea0649a41b7b1"; // Template_RayInteraction.prefab - already has RayInteractable + PointableCanvas wired together
     const string k_HandGrabTemplateGuid = "6ee61821e0d5b094a8d732834b365b21"; // ISDK_HandGrabInteraction - near-field grab
     const string k_RayGrabTemplateGuid = "f1c9f92f4fa1883459a0dfa57e136262";  // ISDK_RayGrabInteraction - grab at a distance
-    const string k_RobotObjectName = "UR3e Robot";
+    const string k_RobotObjectName = "Robot";
     static readonly string[] k_GeneratedRootObjectNames =
     {
-        "Directional Light", k_RobotObjectName, "Robot Placement Handle",
+        "Directional Light", k_RobotObjectName, "Robot Placement Handle", "Robot Selector",
+        "UR3e Robot", // legacy: the robot's name before it became selectable
         "ROS Control Panel", "Panel Placement Handle",
         "Laser Scan", "Laser Scan Placement Handle",
         "RGBd Camera", "RGBd Camera Placement Handle",
@@ -34,13 +34,47 @@ public static class XRVizCreateMVPScene
         "PointCloud2", "PointCloud2 Placement Handle",
         "Camera Image", "Camera Image Placement Handle",
         "TF Origin", "TF Origin Placement Handle",
-        "ArUco Calibration", "ROS Diagnostics",
+        "ArUco Calibration", "ROS Diagnostics", "Locomotion Off",
         "ROS Status Panel", // legacy: was a root object before the panel group was introduced
     };
     const string k_PointCloudComputePath = "Assets/XRViz/Shaders/DepthImagePointCloudGPU.compute";
     // Canvases are authored in 400x300-style UI units and scaled down to metres
     const float k_PanelUnitsToMeters = 0.001f;
     static readonly Vector3 k_RobotBasePosition = new Vector3(0f, -0.7f, 0.9f);
+
+    // --- Robots ----------------------------------------------------------------------------
+    //
+    // What the Views page's Robot row switches between, one at a time (RobotSelector). The first
+    // is the one the scene opens with and must be present; any other whose prefab is missing is
+    // left off the list. Each robot's topics are namespaced to its prefab's name - the URDF's
+    // robot name - so ur3e_rg2 listens on /ur3e_rg2/joint_states.
+    struct RobotChoice
+    {
+        public string Label;
+        public string PrefabGuid;
+
+        // Where the grab handle goes, relative to the robot's root link in its yaw frame. Left
+        // unset, RobotSelector puts it on the top-front-left corner of the robot's bounds.
+        public bool HasHandlePosition;
+        public Vector3 HandlePosition;
+    }
+
+    static readonly RobotChoice[] k_RobotChoices =
+    {
+        // Handle at the trolley's top-front-left corner (its collision box is
+        // 0.71 x 1.085 x 0.73, centered at local x=0/z=0, resting on the floor at y=0 -
+        // see the "Collisions" box under trolley in ur3e_rg2.prefab), nudged outward so the
+        // handle sits beside the corner rather than clipping into it. Placed by hand rather
+        // than from the bounds, which would put it up by the arm.
+        new RobotChoice
+        {
+            Label = "UR3e + RG2", PrefabGuid = "5e41957997504bf458dbb54a5403d950",
+            HasHandlePosition = true, HandlePosition = new Vector3(-0.395f, 1.125f, -0.405f),
+        },
+        new RobotChoice { Label = "UR5e + RG6", PrefabGuid = "de3fd5fe59a32ce45b2245c51350ccc9" },
+        new RobotChoice { Label = "PR2", PrefabGuid = "3f2a0e7e15826894f89673b7593f146c" },
+        new RobotChoice { Label = "Unitree G1", PrefabGuid = "fa9c8d208f25c934aa478694fce41e38" },
+    };
 
     // --- Placement handles ---------------------------------------------------------------
     //
@@ -138,6 +172,19 @@ public static class XRVizCreateMVPScene
 
     const float k_HeaderHeight = 54f;
 
+    // --- Symbols ---------------------------------------------------------------------------
+    //
+    // Only characters LiberationSans can draw. The panel's text is TMP's default LiberationSans
+    // SDF, whose dynamic fallback adds glyphs from LiberationSans.ttf at runtime - so anything
+    // that TTF lacks renders as an empty box, with no warning at generation time. It has the
+    // older pointer shapes (U+25C4/U+25BA) and the multiplication sign but NOT the newer
+    // triangles U+25C0/U+25B6, U+2715 or U+232B, which is what every arrow here used to be.
+    // Check a new symbol against the TTF's cmap before using it.
+    const string k_GlyphPrevious = "◄"; // ◄
+    const string k_GlyphNext = "►";     // ►
+    const string k_GlyphClose = "×";    // ×
+    const string k_GlyphBackspace = "←"; // ←
+
     // --- Panel geometry ------------------------------------------------------------------
     //
     // ONE panel, 0.62 x 0.66 m: a rail of tabs down the left, one page at a time on the right,
@@ -197,16 +244,17 @@ public static class XRVizCreateMVPScene
         light.intensity = 1f;
         lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
-        // UR3e — the prefab already carries RosSubscriberJointState (/joint_states),
-        // RobotStateWriterController (incl. RG2 mimic joints) and RobotStateWriterControllerRos
-        string prefabPath = AssetDatabase.GUIDToAssetPath(k_RobotPrefabGuid);
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-        if (prefab == null)
+        // The robots. Each prefab already carries RosSubscriberJointState (/joint_states),
+        // RobotStateWriterController (incl. gripper mimic joints) and RobotStateWriterControllerRos.
+        // The first is placed now so the scene shows a robot in the Editor; RobotSelector adopts
+        // it, namespaces its topics, and swaps it for another at runtime.
+        var robotPrefabs = LoadRobotPrefabs();
+        if (robotPrefabs[0] == null)
         {
-            Debug.LogError($"[XRViz] ur3e_rg2 prefab not found (guid {k_RobotPrefabGuid}).");
+            Debug.LogError($"[XRViz] {k_RobotChoices[0].Label} prefab not found (guid {k_RobotChoices[0].PrefabGuid}).");
             return;
         }
-        var robot = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
+        var robot = (GameObject)PrefabUtility.InstantiatePrefab(robotPrefabs[0], scene);
         robot.name = k_RobotObjectName;
         robot.transform.SetPositionAndRotation(k_RobotBasePosition, Quaternion.identity);
         var articulationBodies = robot.GetComponentsInChildren<ArticulationBody>();
@@ -214,14 +262,11 @@ public static class XRVizCreateMVPScene
         if (robotRoot == null)
             robotRoot = articulationBodies.FirstOrDefault();
 
-        // Grab handle at the trolley's top-front-left corner (its collision box is
-        // 0.71 x 1.085 x 0.73, centered at local x=0/z=0, resting on the floor at y=0 -
-        // see the "Collisions" box under trolley in ur3e_rg2.prefab), nudged outward
-        // so the handle sits beside the corner rather than clipping into it. Make it
-        // grabbable with the Interaction SDK (see Docs/MVP_QUEST3_SETUP.md) and the robot follows
-        var trolleyCornerOffset = new Vector3(-0.395f, 1.125f, -0.405f);
-        var robotHandle = CreatePlacementHandle(k_RobotHandleStyle, k_RobotBasePosition + trolleyCornerOffset,
-            0.04f, target: null, articulationBody: robotRoot, offset: -trolleyCornerOffset);
+        // Grabbable with the Interaction SDK (see Docs/MVP_QUEST3_SETUP.md) and the robot
+        // follows. One handle for whichever robot is showing: RobotSelector retargets it.
+        var robotHandlePosition = k_RobotChoices[0].HandlePosition;
+        var robotHandle = CreatePlacementHandle(k_RobotHandleStyle, k_RobotBasePosition + robotHandlePosition,
+            0.04f, target: null, articulationBody: robotRoot, offset: -robotHandlePosition);
 
         // The TF world's origin: what every TF-anchored visualisation is measured out from, and
         // therefore the one thing that has to line up with the real room for all of them to land
@@ -251,13 +296,8 @@ public static class XRVizCreateMVPScene
         CreatePlacementHandle(k_TfOriginHandleStyle, tfOriginGo.transform.position,
             0.05f, target: tfOriginGo.transform, articulationBody: null, offset: Vector3.zero);
 
-        // The robot's own base link is a TF frame like any other, so the robot can be placed from
-        // /tf too - which is what makes a mobile base (odom -> base_link) move in the room rather
-        // than staying wherever it was dropped. No frame source: no message carries the robot's
-        // root frame name, so it is named here. Retype it in the Inspector for a robot whose root
-        // link isn't the conventional base_link.
-        AddTfAnchor(robot, robotHandle, frameSource: null, frameId: "base_link", label: "Robot");
-        AddVisibilityTarget(robot, "Robot");
+        // The robot's TfAnchor and Scene row are added by RobotSelector rather than here: a robot
+        // it spawns at runtime needs them too, and two places defining them would drift.
 
         // Laser scan visualisation. The scan mesh is built in the sensor's own frame under this
         // object's Transform, so its handle moves it like anything else - point the topic browser
@@ -484,7 +524,10 @@ public static class XRVizCreateMVPScene
         var tabs = canvasGo.AddComponent<ControlPanelTabs>();
 
         // Chassis-tag calibration rig, built before the pages since the Calibrate page drives it
-        var calibrator = CreateArucoCalibrationRig(robot, robotHandle);
+        var calibrator = CreateArucoCalibrationRig(robotHandle);
+
+        // After the calibrator and the status block, since a switch repoints both at the new robot
+        var robotSelector = CreateRobotSelector(robot, robotPrefabs, robotHandle, calibrator, statusUi);
 
         // A short word on the tab, the full name in the header once you are there - the rail
         // stays narrow without the tabs becoming cryptic.
@@ -513,7 +556,7 @@ public static class XRVizCreateMVPScene
         // No target list: the browser finds every subscriber in the scene, which is the only way
         // the copies made on the Views page can turn up in it
         CreateTopicsPage(pageRoots[1].transform);
-        CreateViewsPage(pageRoots[2].transform, spawner, actions);
+        CreateViewsPage(pageRoots[2].transform, spawner, actions, robotSelector);
         CreateFramesPage(pageRoots[3].transform, actions);
         CreateScenePage(pageRoots[4].transform, actions);
         CreateCalibratePage(pageRoots[5].transform, calibrator);
@@ -589,6 +632,12 @@ public static class XRVizCreateMVPScene
         var diagnosticsGo = new GameObject("ROS Diagnostics");
         diagnosticsGo.AddComponent<RosDiagnosticsReporter>();
 
+        // The interaction rig's thumbstick locomotion moves the camera rig, which in MR drags the
+        // whole virtual world off the real room. Its own root object so it is easy to find and
+        // switch off if locomotion is ever wanted back.
+        var locomotionOffGo = new GameObject("Locomotion Off");
+        locomotionOffGo.AddComponent<DisableLocomotion>();
+
         EditorSceneManager.SaveScene(scene, k_ScenePath);
         AddToBuildSettings(k_ScenePath);
 
@@ -605,7 +654,7 @@ public static class XRVizCreateMVPScene
             "  Topics - ask the endpoint what it's advertising and re-point a subscriber at a " +
             "different topic; the arrows pick which subscriber, the list is filtered to that " +
             "subscriber's message type, and the red X detaches it from its topic again\n" +
-            "  Views - how many of each visualisation the scene has, with a - and a + per kind\n" +
+            "  Views - which robot, and how many of each visualisation, with a - and a + per kind\n" +
             "  TF - per-visualisation TF/manual placement, with the frame each one is using, " +
             "plus All to TF / All to Manual\n" +
             "  Scene - show/hide each visualisation, Clear Data, Reset Layout\n" +
@@ -631,8 +680,14 @@ public static class XRVizCreateMVPScene
             "from with NO topic bound, so give it one on the Topics tab, where it appears as its " +
             "own target - that is the whole point, two camera windows on two different cameras. " +
             "The count includes the scene's own instance and stops at 1: to get rid of that one, " +
-            "hide it on the Scene tab or detach its topic with the Topics tab's X. The robot has " +
-            "no row, deliberately - there is one robot.\n\n" +
+            "hide it on the Scene tab or detach its topic with the Topics tab's X.\n\n" +
+
+            "WHICH ROBOT. The Views tab's top row switches the robot (UR3e + RG2, UR5e + RG6, PR2, " +
+            "Unitree G1) - one at a time, swapped where it stands, keeping its TF or hand " +
+            "placement. Its topics are namespaced to its URDF name, so the UR3e listens on " +
+            "/ur3e_rg2/joint_states: publish joint states under that namespace on the ROS side, or " +
+            "re-pick the topic on the Topics tab. This generator bakes joint names into each robot " +
+            "prefab, which is what makes the joints move in an APK.\n\n" +
 
             "DETACHING A TOPIC. The red X on the Topics tab unsubscribes the selected subscriber " +
             "from the endpoint: its callback is dropped and nothing more comes over the socket " +
@@ -647,7 +702,7 @@ public static class XRVizCreateMVPScene
             "where /tf says it is. The label floating above the triad says whether /tf is arriving, " +
             "how many visualisations are placed from it, and when something last moved it. Frames " +
             "come from each topic's own header, so retargeting a topic retargets its anchor - except " +
-            "the robot's, which is typed on its TfAnchor component (default base_link).\n\n" +
+            "the robot's, which is set per robot on Robot Selector (base_link, or the G1's pelvis).\n\n" +
 
             "THE CAMERA IMAGE WINDOW (yellow handle) puts any sensor_msgs/Image topic on a " +
             "floating panel. It is not TF-placed - an image is a picture, not geometry - so it " +
@@ -1163,12 +1218,12 @@ public static class XRVizCreateMVPScene
 
         var browserUi = page.gameObject.AddComponent<TopicBrowserUI>();
 
-        var prevTargetButton = CreateButton(page, "\u25c0", new Vector2(-180f, 228f),
+        var prevTargetButton = CreateButton(page, k_GlyphPrevious,new Vector2(-180f, 228f),
             new Vector2(48f, 52f), 22f, true, k_ButtonAccent);
         UnityEventTools.AddVoidPersistentListener(prevTargetButton.onClick, browserUi.PreviousTarget);
         var targetLabel = CreateLabel(page, "Target Label", "", new Vector2(-20f, 228f),
             new Vector2(228f, 52f), 20f);
-        var nextTargetButton = CreateButton(page, "\u25b6", new Vector2(124f, 228f),
+        var nextTargetButton = CreateButton(page, k_GlyphNext,new Vector2(124f, 228f),
             new Vector2(48f, 52f), 22f, true, k_ButtonAccent);
         UnityEventTools.AddVoidPersistentListener(nextTargetButton.onClick, browserUi.NextTarget);
 
@@ -1176,7 +1231,7 @@ public static class XRVizCreateMVPScene
         // acts on, because it is the one control on this page that takes something away - and
         // the row list below is a list of topics you could pick, where an X per row would mean
         // "unsubscribe from a topic I am not on".
-        var detachButton = CreateButton(page, "\u2715", new Vector2(180f, 228f),
+        var detachButton = CreateButton(page, k_GlyphClose,new Vector2(180f, 228f),
             new Vector2(48f, 52f), 22f, true, k_ButtonNegative);
         UnityEventTools.AddVoidPersistentListener(detachButton.onClick, browserUi.UnsubscribeTarget);
 
@@ -1209,13 +1264,13 @@ public static class XRVizCreateMVPScene
             new Vector2(194f, 46f), 19f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(typeFilterButton.onClick, browserUi.ToggleShowAllTypes);
 
-        var prevButton = CreateButton(page, "\u25c0 Prev", new Vector2(-132f, -232f),
+        var prevButton = CreateButton(page, k_GlyphPrevious + " Prev",new Vector2(-132f, -232f),
             new Vector2(130f, 46f), 18f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(prevButton.onClick, browserUi.PreviousPage);
         var pageLabel = CreateLabel(page, "Page Label", "1 / 1", new Vector2(0f, -232f),
             new Vector2(120f, 46f), 18f);
         pageLabel.color = k_TextMuted;
-        var nextButton = CreateButton(page, "Next \u25b6", new Vector2(132f, -232f),
+        var nextButton = CreateButton(page, "Next " + k_GlyphNext,new Vector2(132f, -232f),
             new Vector2(130f, 46f), 18f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(nextButton.onClick, browserUi.NextPage);
 
@@ -1238,9 +1293,9 @@ public static class XRVizCreateMVPScene
     // already knows how each visualisation was built and which handle belongs to it - the
     // alternative is a list in the Inspector that goes stale the next time this runs.
     //
-    // The robot is deliberately absent. There is one robot: a second one would subscribe to a
-    // second /joint_states and stand in the room beside the first, and the arm the chassis
-    // calibration snaps onto has to be unambiguous.
+    // The robot is deliberately absent. There is one robot at a time - RobotSelector swaps it
+    // rather than copying it - since a second would stand in the room beside the first, and the
+    // arm the chassis calibration snaps onto has to be unambiguous.
     static void ConfigureSpawner(VisualizationSpawner spawner,
         (string Label, GameObject Template, GameObject Handle, float Spacing)[] kinds)
     {
@@ -1270,7 +1325,7 @@ public static class XRVizCreateMVPScene
     // nothing to copy and no way back. "I do not want this one" is the Scene tab (hide it) or
     // the Topics tab (detach its topic), both of which leave it recoverable.
     static VisualizationCountPanelUI CreateViewsPage(Transform page, VisualizationSpawner spawner,
-        ControlPanelActions actions)
+        ControlPanelActions actions, RobotSelector robots)
     {
         int rowCount = Mathf.Max(1, spawner.KindCount);
 
@@ -1280,6 +1335,22 @@ public static class XRVizCreateMVPScene
             new Vector2(400f, 26f), 17f);
         status.color = k_TextMuted;
 
+        // Which robot, first: it is the bigger question, and the one row that is a choice rather
+        // than a count. The arrows sit in the same columns as the -/+ below, with the position in
+        // the list where the count goes, so the page still reads as one table.
+        var robotLabel = CreateLabel(page, "Robot Row", "", new Vector2(-92f, 168f),
+            new Vector2(216f, 56f), 20f, TextAlignmentOptions.Left);
+        var robotPrevious = CreateButton(page, k_GlyphPrevious, new Vector2(66f, 168f),
+            new Vector2(50f, 48f), 20f, true, k_ButtonAccent);
+        robotPrevious.gameObject.name = "Robot Previous";
+        var robotIndex = CreateLabel(page, "Robot Index", "1/1", new Vector2(124f, 168f),
+            new Vector2(60f, 48f), 18f);
+        var robotNext = CreateButton(page, k_GlyphNext, new Vector2(182f, 168f),
+            new Vector2(50f, 48f), 20f, true, k_ButtonAccent);
+        robotNext.gameObject.name = "Robot Next";
+
+        CreateDivider(page, 128f, 400f);
+
         var rowLabels = new TextMeshProUGUI[rowCount];
         var countLabels = new TextMeshProUGUI[rowCount];
         var addButtons = new Button[rowCount];
@@ -1287,7 +1358,7 @@ public static class XRVizCreateMVPScene
 
         for (int i = 0; i < rowCount; i++)
         {
-            float y = 166f - i * 64f;
+            float y = 88f - i * 60f;
 
             rowLabels[i] = CreateLabel(page, $"View Row {i}", "", new Vector2(-92f, y),
                 new Vector2(216f, 48f), 20f, TextAlignmentOptions.Left);
@@ -1306,18 +1377,22 @@ public static class XRVizCreateMVPScene
             addButtons[i].gameObject.name = $"View Add {i}";
         }
 
-        CreateDivider(page, -110f, 400f);
+        CreateDivider(page, -126f, 400f);
 
-        CreateHint(page, new Vector2(0f, -196f), new Vector2(400f, 120f),
-            "A new copy arrives beside the one it was made from, with NO topic - give it one on " +
-            "the Topics tab, where it appears as its own target. Copies carry their own grab " +
-            "handle, TF anchor and Scene row. The minus removes the newest copy and detaches its " +
-            "subscribers from the endpoint; the scene's own one cannot be removed.");
+        CreateHint(page, new Vector2(0f, -192f), new Vector2(400f, 128f),
+            "One robot at a time; its topics live under its name. A new copy of a view arrives " +
+            "beside the original with NO topic - give it one on the Topics tab. The minus " +
+            "removes the newest copy; the scene's own one cannot be removed.");
 
         var so = new SerializedObject(panelUi);
         so.FindProperty("_spawner").objectReferenceValue = spawner;
         so.FindProperty("_actions").objectReferenceValue = actions;
         so.FindProperty("_status").objectReferenceValue = status;
+        so.FindProperty("_robots").objectReferenceValue = robots;
+        so.FindProperty("_robotLabel").objectReferenceValue = robotLabel;
+        so.FindProperty("_robotIndex").objectReferenceValue = robotIndex;
+        so.FindProperty("_robotPrevious").objectReferenceValue = robotPrevious;
+        so.FindProperty("_robotNext").objectReferenceValue = robotNext;
 
         SetArray(so, "_rowLabels", rowLabels);
         SetArray(so, "_countLabels", countLabels);
@@ -1350,13 +1425,13 @@ public static class XRVizCreateMVPScene
 
         // Paged since visualisations can be duplicated at runtime. Up beside the status rather
         // than below the rows: the rows are two lines tall and already reach the hint.
-        var prevPageButton = CreateButton(page, "\u25c0", new Vector2(96f, 226f),
+        var prevPageButton = CreateButton(page, k_GlyphPrevious,new Vector2(96f, 226f),
             new Vector2(38f, 36f), 17f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(prevPageButton.onClick, panelUi.PreviousPage);
         var pageLabel = CreateLabel(page, "Page Label", "1 / 1", new Vector2(140f, 226f),
             new Vector2(44f, 36f), 16f);
         pageLabel.color = k_TextMuted;
-        var nextPageButton = CreateButton(page, "\u25b6", new Vector2(184f, 226f),
+        var nextPageButton = CreateButton(page, k_GlyphNext,new Vector2(184f, 226f),
             new Vector2(38f, 36f), 17f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(nextPageButton.onClick, panelUi.NextPage);
 
@@ -1404,10 +1479,110 @@ public static class XRVizCreateMVPScene
         return panelUi;
     }
 
+    // Every robot the selector can switch to, index-aligned with k_RobotChoices (null where the
+    // prefab is missing), with each one's joint names baked first. A robot spawned at runtime
+    // comes straight from the prefab asset, so the names have to be in the asset itself - baked
+    // only onto a scene instance, every robot but the first would stand still in a Quest APK.
+    static GameObject[] LoadRobotPrefabs()
+    {
+        var prefabs = new GameObject[k_RobotChoices.Length];
+        for (int i = 0; i < k_RobotChoices.Length; i++)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(k_RobotChoices[i].PrefabGuid);
+            if (string.IsNullOrEmpty(path) || AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
+            {
+                Debug.LogWarning($"[XRViz] {k_RobotChoices[i].Label} prefab not found " +
+                    $"(guid {k_RobotChoices[i].PrefabGuid}); it is left off the robot list.");
+                continue;
+            }
+
+            EnsureJointNamesBaked(path);
+            prefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        }
+        return prefabs;
+    }
+
+    // Only writes the prefab when a name is missing or stale, so an up-to-date robot is not
+    // re-saved (and re-diffed) on every run of the generator.
+    static void EnsureJointNamesBaked(string prefabPath)
+    {
+        var contents = PrefabUtility.LoadPrefabContents(prefabPath);
+        try
+        {
+            bool stale = contents.GetComponentsInChildren<Unity.Robotics.UrdfImporter.UrdfJoint>(true)
+                .Where(j => !string.IsNullOrEmpty(j.jointName))
+                .Any(j =>
+                {
+                    var baked = j.GetComponent<UrdfJointName>();
+                    return baked == null || baked.JointName != j.jointName;
+                });
+            if (!stale)
+                return;
+
+            int count = XRVizBakeUrdfJointNames.Bake(contents, recordUndo: false);
+            PrefabUtility.SaveAsPrefabAsset(contents, prefabPath);
+            Debug.Log($"[XRViz] Baked {count} URDF joint name(s) into {prefabPath}.");
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(contents);
+        }
+    }
+
+    // The TF frame a robot is placed by when anchored: base_link where the robot has one, which
+    // is what a ROS driver publishes for an arm or a mobile base, else its root link (the G1's
+    // pelvis).
+    static string RootFrameOf(GameObject prefab)
+    {
+        var transforms = prefab.GetComponentsInChildren<Transform>(true);
+        if (transforms.Any(t => t.name == "base_link"))
+            return "base_link";
+
+        var root = prefab.GetComponentsInChildren<ArticulationBody>(true).FirstOrDefault();
+        return root != null ? root.name : "base_link";
+    }
+
+    static RobotSelector CreateRobotSelector(GameObject robot, GameObject[] prefabs, GameObject robotHandle,
+        ArucoRobotCalibrator calibrator, RosConnectionStatusUI statusUi)
+    {
+        // Its own root object: it owns the robot rather than being part of it, and the robot is
+        // destroyed and replaced under it. Its pose is where a robot goes if none is serialized.
+        var selectorGo = new GameObject("Robot Selector");
+        selectorGo.transform.SetPositionAndRotation(k_RobotBasePosition, Quaternion.identity);
+        var selector = selectorGo.AddComponent<RobotSelector>();
+
+        // k_RobotChoices[0] is the robot placed in the scene, and Run has already bailed if it is
+        // missing - so it stays at index 0, which is what _selected says
+        var available = Enumerable.Range(0, k_RobotChoices.Length).Where(i => prefabs[i] != null).ToArray();
+
+        var so = new SerializedObject(selector);
+        var robotsProp = so.FindProperty("_robots");
+        robotsProp.arraySize = available.Length;
+        for (int i = 0; i < available.Length; i++)
+        {
+            var choice = k_RobotChoices[available[i]];
+            var element = robotsProp.GetArrayElementAtIndex(i);
+            element.FindPropertyRelative("Label").stringValue = choice.Label;
+            element.FindPropertyRelative("Prefab").objectReferenceValue = prefabs[available[i]];
+            element.FindPropertyRelative("Namespace").stringValue = ""; // the prefab's own name
+            element.FindPropertyRelative("RootFrameId").stringValue = RootFrameOf(prefabs[available[i]]);
+            element.FindPropertyRelative("UseHandlePosition").boolValue = choice.HasHandlePosition;
+            element.FindPropertyRelative("HandlePosition").vector3Value = choice.HandlePosition;
+        }
+        so.FindProperty("_selected").intValue = 0;
+        so.FindProperty("_current").objectReferenceValue = robot;
+        so.FindProperty("_handle").objectReferenceValue = robotHandle.GetComponent<PlacementHandle>();
+        so.FindProperty("_calibrator").objectReferenceValue = calibrator;
+        so.FindProperty("_status").objectReferenceValue = statusUi;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        return selector;
+    }
+
     // The rig that reads the passthrough camera and moves the robot onto the chassis tag. Kept
     // as its own root object rather than hung off the robot, because what it ends up moving may
     // be the TF origin instead - it is a tool that acts on the scene, not a part of the robot.
-    static ArucoRobotCalibrator CreateArucoCalibrationRig(GameObject robot, GameObject robotHandle)
+    static ArucoRobotCalibrator CreateArucoCalibrationRig(GameObject robotHandle)
     {
         var rigGo = new GameObject("ArUco Calibration");
 
@@ -1439,7 +1614,7 @@ public static class XRVizCreateMVPScene
         so.FindProperty("_feed").objectReferenceValue = feed;
         so.FindProperty("_gizmo").objectReferenceValue = gizmo;
         so.FindProperty("_robotHandle").objectReferenceValue = robotHandle.GetComponent<PlacementHandle>();
-        so.FindProperty("_robotAnchor").objectReferenceValue = robot.GetComponent<TfAnchor>();
+        // _robotAnchor is left to RobotSelector: the anchor lives on the robot, which it replaces
         so.ApplyModifiedPropertiesWithoutUndo();
 
         return calibrator;
@@ -1558,13 +1733,13 @@ public static class XRVizCreateMVPScene
 
         // Same pager as the TF page, for the same reason: the Views tab can put more
         // visualisations in the scene than six rows hold.
-        var prevPageButton = CreateButton(page, "\u25c0", new Vector2(96f, 230f),
+        var prevPageButton = CreateButton(page, k_GlyphPrevious,new Vector2(96f, 230f),
             new Vector2(38f, 34f), 17f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(prevPageButton.onClick, panelUi.PreviousPage);
         var pageLabel = CreateLabel(page, "Page Label", "1 / 1", new Vector2(140f, 230f),
             new Vector2(44f, 34f), 16f);
         pageLabel.color = k_TextMuted;
-        var nextPageButton = CreateButton(page, "\u25b6", new Vector2(184f, 230f),
+        var nextPageButton = CreateButton(page, k_GlyphNext,new Vector2(184f, 230f),
             new Vector2(38f, 34f), 17f, true, k_ButtonNeutral);
         UnityEventTools.AddVoidPersistentListener(nextPageButton.onClick, panelUi.NextPage);
 
@@ -1651,7 +1826,7 @@ public static class XRVizCreateMVPScene
                 float x = -110f + col * 110f;
                 string key = grid[row, col];
                 bool isBackspace = key == "back";
-                var keyButton = CreateButton(page, isBackspace ? "\u232b" : key,
+                var keyButton = CreateButton(page, isBackspace ? k_GlyphBackspace : key,
                     new Vector2(x, y), new Vector2(100f, 56f), 24f, true, k_ButtonNeutral);
                 if (isBackspace)
                     UnityEventTools.AddVoidPersistentListener(keyButton.onClick, keypadUi.Backspace);

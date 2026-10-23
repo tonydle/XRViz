@@ -28,7 +28,7 @@ namespace Unity.Robotics
     // by accident, on every single press, is not.
     //
     // The template itself is never destroyed - the count floor is one. A kind you do not want is
-    // hidden from the Scene tab or detached from its topic with the Topics tab's ✕; destroying
+    // hidden from the Scene tab or detached from its topic with the Topics tab's ×; destroying
     // the last one would leave nothing to copy from and no way back.
     public class VisualizationSpawner : MonoBehaviour
     {
@@ -179,7 +179,7 @@ namespace Unity.Robotics
             if (kind == null || kind.Copies.Count == 0)
             {
                 message = $"<color=#FFB300>{LabelOf(index)}: the scene's own one cannot be " +
-                          "removed — hide it on the Scene tab, or detach its topic with ✕</color>";
+                          "removed — hide it on the Scene tab, or detach its topic with ×</color>";
                 return false;
             }
 

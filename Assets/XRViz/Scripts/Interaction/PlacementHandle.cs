@@ -126,6 +126,25 @@ namespace Unity.Robotics
             _defaultRotation = transform.rotation;
         }
 
+        // Carry something differently shaped from the same place - RobotSelector swapping one
+        // robot for another. Unlike SetTarget, the home kept is the TARGET's: Reset Layout puts
+        // the new robot where the old one would have gone, and the grip moves to suit its shape,
+        // rather than the new robot landing wherever the old grip position implies.
+        public void ReplaceTarget(Transform target, ArticulationBody articulationBody, Vector3 offset)
+        {
+            Quaternion homeRotation = _yawOnly
+                ? Quaternion.Euler(0f, _defaultRotation.eulerAngles.y, 0f)
+                : _defaultRotation;
+            Vector3 targetHome = _defaultPosition + homeRotation * _offset;
+
+            _target = target;
+            _targetArticulationBody = articulationBody;
+            _offset = offset;
+            _defaultPosition = targetHome - homeRotation * offset;
+
+            SnapToTarget();
+        }
+
         // Move the grip relative to whatever it carries. For a visualisation whose size isn't
         // known until the first message arrives - ImageWindow, whose window is sized from the
         // image's own aspect - a serialized offset cannot be right: the handle has to stay clear

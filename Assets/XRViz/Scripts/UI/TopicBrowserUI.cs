@@ -353,7 +353,7 @@ namespace Unity.Robotics
             binding.SetTopic(topic);
             SetStatus($"subscribed to <color=#4CAF50>{topic}</color>");
             RenderTargetLabel();
-            Render(); // move the ▶ marker onto the new selection
+            Render(); // move the ► marker onto the new selection
         }
 
         private void RenderTypeFilterLabel()
@@ -419,7 +419,7 @@ namespace Unity.Robotics
                 }
 
                 string topic = _topics[topicIndex];
-                _rowLabels[i].text = topic == current ? $"<color=#4CAF50>▶ {topic}</color>" : topic;
+                _rowLabels[i].text = topic == current ? $"<color=#4CAF50>► {topic}</color>" : topic;
             }
         }
 
