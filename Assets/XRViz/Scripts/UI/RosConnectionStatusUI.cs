@@ -28,6 +28,18 @@ namespace Unity.Robotics
             _ros = ROSConnection.GetOrCreateInstance();
         }
 
+        // RobotSelector, after swapping the robot. Forgets the last arrival: it was the old
+        // robot's topic, and "0.3 s ago" carried across would claim the new one is already live.
+        public void SetJointStateSubscriber(RosSubscriberJointState jointStateSub)
+        {
+            _jointStateSub = jointStateSub;
+            _lastJointStateRealtime = -1f;
+
+            var stamp = jointStateSub != null ? jointStateSub.GetLatestTime() : null;
+            _lastStampSec = stamp != null ? stamp.sec : 0;
+            _lastStampNanosec = stamp != null ? stamp.nanosec : 0u;
+        }
+
         public void Connect()
         {
             _ros?.Connect();

@@ -34,7 +34,10 @@ public static class XRVizBakeUrdfJointNames
     }
 
     // Returns how many joint names were written. Safe to re-run; it overwrites in place.
-    public static int Bake(GameObject root)
+    //
+    // recordUndo is off for prefab contents opened with PrefabUtility.LoadPrefabContents: they
+    // live in a preview scene with no undo history, and aren't a prefab instance to record.
+    public static int Bake(GameObject root, bool recordUndo = true)
     {
         int baked = 0;
         // GetComponent<UrdfJoint> picks up every subclass (revolute, continuous, prismatic,
@@ -48,17 +51,23 @@ public static class XRVizBakeUrdfJointNames
             var target = urdfJoint.gameObject;
             var nameComponent = target.GetComponent<UrdfJointName>();
             if (nameComponent == null)
-                nameComponent = Undo.AddComponent<UrdfJointName>(target);
+                nameComponent = recordUndo
+                    ? Undo.AddComponent<UrdfJointName>(target)
+                    : target.AddComponent<UrdfJointName>();
 
-            Undo.RecordObject(nameComponent, "Bake URDF Joint Name");
+            if (recordUndo)
+                Undo.RecordObject(nameComponent, "Bake URDF Joint Name");
             var so = new SerializedObject(nameComponent);
             so.FindProperty("_jointName").stringValue = urdfJoint.jointName;
-            so.ApplyModifiedProperties();
+            if (recordUndo)
+                so.ApplyModifiedProperties();
+            else
+                so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(nameComponent);
             baked++;
         }
 
-        if (baked > 0)
+        if (baked > 0 && recordUndo)
             PrefabUtility.RecordPrefabInstancePropertyModifications(root.transform);
 
         return baked;

@@ -8,9 +8,9 @@ namespace Unity.Robotics
     // copies of it. This is the page you use when one camera window is not enough - add a second
     // one here, then give it its own topic on the Topics tab.
     //
-    // The robot deliberately has no row. There is one robot: a second copy would subscribe to a
-    // second /joint_states and stand in the room next to the first, which is not a thing anyone
-    // wants, and the arm the calibration snaps onto has to be unambiguous.
+    // The robot's row is different in kind: arrows that pick WHICH robot, not a count. There is
+    // only ever one robot - a second would stand in the room next to the first, and the arm the
+    // calibration snaps onto has to be unambiguous - so the choice is a swap (RobotSelector).
     //
     // The count includes the scene's own instance, so it never reads zero - the floor is one, and
     // the − on a kind that has no copies says so rather than quietly doing nothing. Rows are a
@@ -32,6 +32,13 @@ namespace Unity.Robotics
         [SerializeField] private Button[] _addButtons;
         [SerializeField] private Button[] _removeButtons;
 
+        [Header("Robot")]
+        [SerializeField] private RobotSelector _robots;
+        [SerializeField] private TMP_Text _robotLabel;
+        [SerializeField] private TMP_Text _robotIndex;
+        [SerializeField] private Button _robotPrevious;
+        [SerializeField] private Button _robotNext;
+
         private int RowCount => _rowLabels != null ? _rowLabels.Length : 0;
 
         private void Awake()
@@ -46,11 +53,44 @@ namespace Unity.Robotics
                 if (_removeButtons != null && i < _removeButtons.Length && _removeButtons[i] != null)
                     _removeButtons[i].onClick.AddListener(() => Remove(row));
             }
+
+            if (_robotPrevious != null)
+                _robotPrevious.onClick.AddListener(PreviousRobot);
+            if (_robotNext != null)
+                _robotNext.onClick.AddListener(NextRobot);
         }
 
         private void OnEnable()
         {
+            // The selector raises Changed from its own Start as well, so the row is right even
+            // if this page is the first thing shown
+            if (_robots != null)
+                _robots.Changed += Render;
             Render();
+        }
+
+        private void OnDisable()
+        {
+            if (_robots != null)
+                _robots.Changed -= Render;
+        }
+
+        public void NextRobot()
+        {
+            if (_robots == null)
+                return;
+
+            _robots.Next(out string message);
+            _actions?.ShowFeedback(message);
+        }
+
+        public void PreviousRobot()
+        {
+            if (_robots == null)
+                return;
+
+            _robots.Previous(out string message);
+            _actions?.ShowFeedback(message);
         }
 
         public void Add(int index)
@@ -75,6 +115,8 @@ namespace Unity.Robotics
 
         private void Render()
         {
+            RenderRobot();
+
             int kinds = _spawner != null ? _spawner.KindCount : 0;
             int total = 0;
 
@@ -110,6 +152,30 @@ namespace Unity.Robotics
             }
 
             _status.text = $"{total} visualisation{(total == 1 ? "" : "s")} in the scene";
+        }
+
+        private void RenderRobot()
+        {
+            int count = _robots != null ? _robots.Count : 0;
+
+            if (_robotLabel != null)
+            {
+                // The topic rather than the bare namespace: it is what has to match the ROS side,
+                // and it is the thing to check when the arm doesn't move
+                string topic = count > 0 ? _robots.JointStateTopic : string.Empty;
+                _robotLabel.text = count == 0
+                    ? "<b>Robot</b>  <color=#FFB300>none wired</color>"
+                    : $"<b>{_robots.LabelOf(_robots.Selected)}</b>\n" +
+                      $"<size=75%><color=#9AA5B1>{(string.IsNullOrEmpty(topic) ? "no joint states" : topic)}</color></size>";
+            }
+
+            if (_robotIndex != null)
+                _robotIndex.text = count > 0 ? $"{_robots.Selected + 1}/{count}" : string.Empty;
+
+            if (_robotPrevious != null)
+                _robotPrevious.interactable = count > 1;
+            if (_robotNext != null)
+                _robotNext.interactable = count > 1;
         }
     }
 }

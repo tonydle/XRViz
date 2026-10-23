@@ -44,6 +44,50 @@ or as a **standalone Quest 3 APK** (`com.UTS.XRViz`), from the same codebase.
 
 ## Features
 
+### Mirror the real robot
+
+<img src="Docs/media/PickAndPlace.gif" alt="The virtual arm tracking the real robot through a pick-and-place task, gripper included" width="100%">
+
+The URDF model is driven straight from `/joint_states`, gripper mimic joints included, so the
+virtual arm moves with the real one through a whole task — and keeps doing so wherever you
+walk around it.
+
+### Sensors in the room
+
+<table>
+  <tr>
+    <td width="50%"><img src="Docs/media/LaserScan.gif" alt="A LaserScan drawn at the sensor's height, lying on the real walls and furniture" width="100%"></td>
+    <td width="50%"><img src="Docs/media/Pointcloud.gif" alt="An RGBD point cloud and its camera image window, overlaid on the real room" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>LaserScan</b> — coloured by range, at the sensor's real height</td>
+    <td align="center"><b>RGBD point cloud + camera image</b></td>
+  </tr>
+</table>
+
+The RGBD cloud is reconstructed from the camera's own depth, so it lands on the real geometry
+it was measured from:
+
+<table>
+  <tr>
+    <td width="50%"><img src="Docs/media/rgbdcameranopointcloud.png" alt="The real room through passthrough, with the RealSense camera in the foreground" width="100%"></td>
+    <td width="50%"><img src="Docs/media/rgbdcamera.png" alt="The same view with the RGBD point cloud drawn over the real furniture" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center">Real room (passthrough)</td>
+    <td align="center">With the RGBd Camera cloud</td>
+  </tr>
+</table>
+
+- **LaserScan** — drawn at the sensor's real height, coloured by range.
+- **RGBD point cloud** — raw colour + depth `Image` plus `CameraInfo`, reconstructed in a
+  compute shader and drawn as GPU billboards.
+- **`PointCloud2`** — for lidar or pre-fused clouds: decimated before parsing, non-finite
+  points dropped, optical and FLU frames handled correctly.
+- **Camera windows** — floating image panels, with orientation and `bgr8`/`mono8` corrected
+  from the encoding the message reports.
+- **Markers and IMU** — cubes, cube lists and line strips; an IMU orientation visualiser.
+
 ### Connect from the headset
 
 <img src="Docs/media/DynamicIpConnection.gif" alt="Typing the ROS endpoint IP on the panel's keypad and connecting from inside the headset" width="100%">
@@ -65,17 +109,6 @@ each visualiser accepts, and rebinds the subscriber live. The **Views** page add
 copies of any visualisation at runtime, each on its own topic with its own grab handle and TF
 anchor — two camera feeds, two scans, two clouds, side by side. Two subscribers can share one
 topic without interfering.
-
-### Sensors in the room
-
-- **LaserScan** — drawn at the sensor's real height, coloured by range.
-- **RGBD point cloud** — raw colour + depth `Image` plus `CameraInfo`, reconstructed in a
-  compute shader and drawn as GPU billboards.
-- **`PointCloud2`** — for lidar or pre-fused clouds: decimated before parsing, non-finite
-  points dropped, optical and FLU frames handled correctly.
-- **Camera windows** — floating image panels, with orientation and `bgr8`/`mono8` corrected
-  from the encoding the message reports.
-- **Markers and IMU** — cubes, cube lists and line strips; an IMU orientation visualiser.
 
 ### Stale data never looks live
 
@@ -114,8 +147,21 @@ streamed out as ROS topics for recording or shared autonomy.
 
 ### Supported robots
 
-UR3e/UR5e with OnRobot grippers, PR2, Unitree G1 and a RealSense camera ship as URDF-imported
-prefabs. The UR prefabs come fully wired to `/joint_states`, including gripper mimic joints.
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="Docs/media/ur3e+rg2.png" alt="UR3e with an OnRobot RG2 gripper" width="100%"><br><b>UR3e + RG2</b></td>
+    <td width="50%" align="center"><img src="Docs/media/ur5e+rg6.png" alt="UR5e with an OnRobot RG6 gripper" width="100%"><br><b>UR5e + RG6</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="Docs/media/PR2.png" alt="Willow Garage PR2" width="100%"><br><b>PR2</b></td>
+    <td align="center"><img src="Docs/media/unitree-g1.png" alt="Unitree G1 humanoid with Inspire hands" width="100%"><br><b>Unitree G1</b></td>
+  </tr>
+</table>
+
+Pick the robot from the headset — the **Views** tab's top row (◄ ►) swaps it in place, keeping
+its placement. One robot is shown at a time, and its topics are namespaced to its URDF name, so
+the UR3e listens on `/ur3e_rg2/joint_states`. Every robot comes wired to joint states, gripper
+mimic joints included. A RealSense D435 ships as a prefab too.
 
 ---
 

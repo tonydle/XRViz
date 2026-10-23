@@ -19,6 +19,13 @@ namespace Unity.Robotics
             _target = gameObject;
         }
 
+        // Reset() only runs in the Editor, so a target added at runtime (RobotSelector) has to
+        // be told what it hides
+        public void SetTarget(GameObject target)
+        {
+            _target = target;
+        }
+
         // Renaming a copy. Two rows both reading "Camera Image" in the Scene list are worse than
         // useless - the whole reason to have several is to tell them apart.
         public void SetLabel(string label)
